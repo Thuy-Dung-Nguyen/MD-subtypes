@@ -1,0 +1,792 @@
+---
+title: "Computing SNPs effect UKB subgroups"
+author: "Thi Thuy Dung Nguyen"
+date: "7/20/2020"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+This file contains bash command to run analysis in GCTA models on UPPMAX
+
+# Where to find data
+```{bash}
+ssh -A thuydung-sens2017519@bianca.uppmax.uu.se
+# Home directory
+cd /home/thuydung/proj0
+
+# Phenotype data
+cd /home/thuydung/proj0/ukb_subgroup_proj0
+
+# Sparse GRM: full.grm
+cd /proj/sens2017519/nobackup/b2016326_nobackup/private/arvhar/results/grm
+
+# New data full SNPS
+cd /castor/project/proj_nobackup/b2016326_nobackup/UKBB/new_release_20180313/EGAD00010001474_decrypted/
+
+# bfile plink bed bim fam format filter maf 0.01
+cd /proj/sens2017519/nobackup/b2016326_nobackup/private/arvhar/data/ukbb_pbinary
+
+# sample file to go with bgen format of New data
+/castor/project/proj/private/LuyiGrp_shared/GENO/ukb2222_imp_v3_addsex.sample
+
+# covariates pc10_age_fastGWA.txt and sex_fastGWA.txt
+cd /castor/project/proj/private/LuyiGrp_shared/PIPELINE/FastGWA/covariates
+
+# remove outlier non_white ancestry ancestraloutliers_3sd.fid.iid 
+cd /castor/project/proj/private/LuyiGrp_shared/GENO/QC_INFO/AncestralOutliers/
+# iclould folder
+cd ~/Library/Mobile\ Documents/com~apple~CloudDocs/
+# LDSC clone
+/Documents/Thuy\ Dung/PhD/Study\ 0/LDSC
+# Transfer files area
+cd /proj/sens2017519/nobackup/wharf/thuydung/thuydung-sens2017519
+```
+
+# Useful commands
+```{bash}
+# To see what tasks are pending on uppmaxx:
+jobinfo
+# to submit task to uppmax
+sbatch filename.script (made by this: chmod 700 filename)
+# To cancel a task pending
+scancel task_ID (look at the list on jobinfo)
+# To print taks that I tried to run before
+finishedjobinfo
+# To make a filename.sh a program and run it.
+chmod 700 filename
+# To load modules on uppmax
+module load R 
+module load R_packages
+# To load R
+R
+```
+
+# PART 1: Estimating SNPs effect for each MDD subgroups
+## 1. Early onset MDD
+```{bash}
+#!/bin/bash
+#SBATCH --job-name=GWAS_early
+#SBATCH --account=sens2017519
+#SBATCH --time=02-00:00:00
+#SBATCH --partition=core
+#SBATCH --ntasks=16
+#SBATCH -C mem256GB
+
+/home/thuydung/gcta_1.93.0beta/gcta64 \
+--mbgen /home/thuydung/proj0/ukb_bgen_list.txt \
+--sample /castor/project/proj/private/LuyiGrp_shared/GENO/ukb2222_imp_v3_addsex.sample \
+--grm-sparse /proj/sens2017519/nobackup/b2016326_nobackup/private/arvhar/results/grm/full \
+--fastGWA-mlm \
+--qcovar /castor/project/proj/private/LuyiGrp_shared/PIPELINE/FastGWA/covariates/pc10_age_fastGWA.txt \
+--covar /castor/project/proj/private/LuyiGrp_shared/PIPELINE/FastGWA/covariates/sex_fastGWA.txt \
+--pheno /home/thuydung/proj0/ukb_subgroup_proj0/pheno_early_gwas.txt \
+--maf 0.01 \
+--threads 16 \
+--out /home/thuydung/proj0/GWAS_MDDsubgroup/GWAS_early_new
+```
+
+## 2. Late onset MDD
+```{bash}
+#!/bin/bash
+#SBATCH --job-name=GWAS_late
+#SBATCH --account=sens2017519
+#SBATCH --time=02-00:00:00
+#SBATCH --partition=core
+#SBATCH --ntasks=16
+#SBATCH -C mem256GB
+
+/home/thuydung/gcta_1.93.0beta/gcta64 \
+--mbgen /home/thuydung/proj0/ukb_bgen_list.txt \
+--sample /castor/project/proj/private/LuyiGrp_shared/GENO/ukb2222_imp_v3_addsex.sample \
+--grm-sparse /proj/sens2017519/nobackup/b2016326_nobackup/private/arvhar/results/grm/full \
+--fastGWA-mlm \
+--qcovar /castor/project/proj/private/LuyiGrp_shared/PIPELINE/FastGWA/covariates/pc10_age_fastGWA.txt \
+--covar /castor/project/proj/private/LuyiGrp_shared/PIPELINE/FastGWA/covariates/sex_fastGWA.txt \
+--pheno /home/thuydung/proj0/ukb_subgroup_proj0/pheno_late_gwas.txt \
+--maf 0.01 \
+--threads 16 \
+--out /home/thuydung/proj0/GWAS_MDDsubgroup/GWAS_late_new
+```
+
+## 3. Single episode
+```{bash}
+#!/bin/bash
+#SBATCH --job-name=GWAS_single
+#SBATCH --account=sens2017519
+#SBATCH --time=02-00:00:00
+#SBATCH --partition=core
+#SBATCH --ntasks=16
+#SBATCH -C mem256GB
+
+/home/thuydung/gcta_1.93.0beta/gcta64 \
+--mbgen /home/thuydung/proj0/ukb_bgen_list.txt \
+--sample /castor/project/proj/private/LuyiGrp_shared/GENO/ukb2222_imp_v3_addsex.sample \
+--grm-sparse /proj/sens2017519/nobackup/b2016326_nobackup/private/arvhar/results/grm/full \
+--fastGWA-mlm \
+--qcovar /castor/project/proj/private/LuyiGrp_shared/PIPELINE/FastGWA/covariates/pc10_age_fastGWA.txt \
+--covar /castor/project/proj/private/LuyiGrp_shared/PIPELINE/FastGWA/covariates/sex_fastGWA.txt \
+--pheno /home/thuydung/proj0/ukb_subgroup_proj0/pheno_single_gwas.txt \
+--maf 0.01 \
+--threads 16 \
+--out /home/thuydung/proj0/GWAS_MDDsubgroup/GWAS_single_new
+```
+## 4. Recurrent episode
+```{bash}
+#!/bin/bash
+#SBATCH --job-name=GWAS_recurrent
+#SBATCH --account=sens2017519
+#SBATCH --time=02-00:00:00
+#SBATCH --partition=core
+#SBATCH --ntasks=16
+#SBATCH -C mem256GB
+
+/home/thuydung/gcta_1.93.0beta/gcta64 \
+--mbgen /home/thuydung/proj0/ukb_bgen_list.txt \
+--sample /castor/project/proj/private/LuyiGrp_shared/GENO/ukb2222_imp_v3_addsex.sample \
+--grm-sparse /proj/sens2017519/nobackup/b2016326_nobackup/private/arvhar/results/grm/full \
+--fastGWA-mlm \
+--qcovar /castor/project/proj/private/LuyiGrp_shared/PIPELINE/FastGWA/covariates/pc10_age_fastGWA.txt \
+--covar /castor/project/proj/private/LuyiGrp_shared/PIPELINE/FastGWA/covariates/sex_fastGWA.txt \
+--pheno /home/thuydung/proj0/ukb_subgroup_proj0/pheno_recurrent_gwas.txt \
+--maf 0.01 \
+--threads 16 \
+--out /home/thuydung/proj0/GWAS_MDDsubgroup/GWAS_recurrent_new
+```
+
+## 5. Mild MDD
+```{bash}
+#!/bin/bash
+#SBATCH --job-name=GWAS_mild
+#SBATCH --account=sens2017519
+#SBATCH --time=02-00:00:00
+#SBATCH --partition=core
+#SBATCH --ntasks=16
+#SBATCH -C mem256GB
+
+/home/thuydung/gcta_1.93.0beta/gcta64 \
+--mbgen /home/thuydung/proj0/ukb_bgen_list.txt \
+--sample /castor/project/proj/private/LuyiGrp_shared/GENO/ukb2222_imp_v3_addsex.sample \
+--grm-sparse /proj/sens2017519/nobackup/b2016326_nobackup/private/arvhar/results/grm/full \
+--fastGWA-mlm \
+--qcovar /castor/project/proj/private/LuyiGrp_shared/PIPELINE/FastGWA/covariates/pc10_age_fastGWA.txt \
+--covar /castor/project/proj/private/LuyiGrp_shared/PIPELINE/FastGWA/covariates/sex_fastGWA.txt \
+--pheno /home/thuydung/proj0/ukb_subgroup_proj0/pheno_mild_gwas.txt \
+--maf 0.01 \
+--threads 16 \
+--out /home/thuydung/proj0/GWAS_MDDsubgroup/GWAS_mild_new
+```
+
+## 6. Severe MDD
+```{bash}
+#!/bin/bash
+#SBATCH --job-name=GWAS_severe
+#SBATCH --account=sens2017519
+#SBATCH --time=02-00:00:00
+#SBATCH --partition=core
+#SBATCH --ntasks=16
+#SBATCH -C mem256GB
+
+/home/thuydung/gcta_1.93.0beta/gcta64 \
+--mbgen /home/thuydung/proj0/ukb_bgen_list.txt \
+--sample /castor/project/proj/private/LuyiGrp_shared/GENO/ukb2222_imp_v3_addsex.sample \
+--grm-sparse /proj/sens2017519/nobackup/b2016326_nobackup/private/arvhar/results/grm/full \
+--fastGWA-mlm \
+--qcovar /castor/project/proj/private/LuyiGrp_shared/PIPELINE/FastGWA/covariates/pc10_age_fastGWA.txt \
+--covar /castor/project/proj/private/LuyiGrp_shared/PIPELINE/FastGWA/covariates/sex_fastGWA.txt \
+--pheno /home/thuydung/proj0/ukb_subgroup_proj0/pheno_severe_gwas.txt \
+--maf 0.01 \
+--threads 16 \
+--out /home/thuydung/proj0/GWAS_MDDsubgroup/GWAS_severe_new
+```
+## 7. Suicide MDD
+```{bash}
+#!/bin/bash
+#SBATCH --job-name=GWAS_suicide
+#SBATCH --account=sens2017519
+#SBATCH --time=02-00:00:00
+#SBATCH --partition=core
+#SBATCH --ntasks=16
+#SBATCH -C mem256GB
+
+/home/thuydung/gcta_1.93.0beta/gcta64 \
+--mbgen /home/thuydung/proj0/ukb_bgen_list.txt \
+--sample /castor/project/proj/private/LuyiGrp_shared/GENO/ukb2222_imp_v3_addsex.sample \
+--grm-sparse /proj/sens2017519/nobackup/b2016326_nobackup/private/arvhar/results/grm/full \
+--fastGWA-mlm \
+--qcovar /castor/project/proj/private/LuyiGrp_shared/PIPELINE/FastGWA/covariates/pc10_age_fastGWA.txt \
+--covar /castor/project/proj/private/LuyiGrp_shared/PIPELINE/FastGWA/covariates/sex_fastGWA.txt \
+--pheno /home/thuydung/proj0/ukb_subgroup_proj0/pheno_suicide_gwas.txt \
+--maf 0.01 \
+--threads 16 \
+--out /home/thuydung/proj0/GWAS_MDDsubgroup/GWAS_suicide_new
+```
+
+## 8. Non-suicide MDD
+```{bash}
+#!/bin/bash
+#SBATCH --job-name=GWAS_no_suicide
+#SBATCH --account=sens2017519
+#SBATCH --time=02-00:00:00
+#SBATCH --partition=core
+#SBATCH --ntasks=16
+#SBATCH -C mem256GB
+
+/home/thuydung/gcta_1.93.0beta/gcta64 \
+--mbgen /home/thuydung/proj0/ukb_bgen_list.txt \
+--sample /castor/project/proj/private/LuyiGrp_shared/GENO/ukb2222_imp_v3_addsex.sample \
+--grm-sparse /proj/sens2017519/nobackup/b2016326_nobackup/private/arvhar/results/grm/full \
+--fastGWA-mlm \
+--qcovar /castor/project/proj/private/LuyiGrp_shared/PIPELINE/FastGWA/covariates/pc10_age_fastGWA.txt \
+--covar /castor/project/proj/private/LuyiGrp_shared/PIPELINE/FastGWA/covariates/sex_fastGWA.txt \
+--pheno /home/thuydung/proj0/ukb_subgroup_proj0/pheno_non_suicide_gwas.txt \
+--maf 0.01 \
+--threads 16 \
+--out /home/thuydung/proj0/GWAS_MDDsubgroup/GWAS_non_suicide_new
+```
+
+## 9. PPD
+```{bash}
+#!/bin/bash
+#SBATCH --job-name=GWAS_ppd
+#SBATCH --account=sens2017519
+#SBATCH --time=02-00:00:00
+#SBATCH --partition=core
+#SBATCH --ntasks=16
+#SBATCH -C mem256GB
+
+/home/thuydung/gcta_1.93.0beta/gcta64 \
+--mbgen /home/thuydung/proj0/ukb_bgen_list.txt \
+--sample /castor/project/proj/private/LuyiGrp_shared/GENO/ukb2222_imp_v3_addsex.sample \
+--grm-sparse /proj/sens2017519/nobackup/b2016326_nobackup/private/arvhar/results/grm/full \
+--fastGWA-mlm \
+--qcovar /castor/project/proj/private/LuyiGrp_shared/PIPELINE/FastGWA/covariates/pc10_age_fastGWA.txt \
+--covar /castor/project/proj/private/LuyiGrp_shared/PIPELINE/FastGWA/covariates/sex_fastGWA.txt \
+--pheno /home/thuydung/proj0/ukb_subgroup_proj0/pheno_PPD_gwas.txt \
+--maf 0.01 \
+--threads 16 \
+--out /home/thuydung/proj0/GWAS_MDDsubgroup/GWAS_ppd_new
+```
+
+## 10. Non-PPD
+```{bash}
+#!/bin/bash
+#SBATCH --job-name=GWAS_non_ppd
+#SBATCH --account=sens2017519
+#SBATCH --time=02-00:00:00
+#SBATCH --partition=core
+#SBATCH --ntasks=16
+#SBATCH -C mem256GB
+
+/home/thuydung/gcta_1.93.0beta/gcta64 \
+--mbgen /home/thuydung/proj0/ukb_bgen_list.txt \
+--sample /castor/project/proj/private/LuyiGrp_shared/GENO/ukb2222_imp_v3_addsex.sample \
+--grm-sparse /proj/sens2017519/nobackup/b2016326_nobackup/private/arvhar/results/grm/full \
+--fastGWA-mlm \
+--qcovar /castor/project/proj/private/LuyiGrp_shared/PIPELINE/FastGWA/covariates/pc10_age_fastGWA.txt \
+--covar /castor/project/proj/private/LuyiGrp_shared/PIPELINE/FastGWA/covariates/sex_fastGWA.txt \
+--pheno /home/thuydung/proj0/ukb_subgroup_proj0/pheno_nonPPD_gwas.txt \
+--maf 0.01 \
+--threads 16 \
+--out /home/thuydung/proj0/GWAS_MDDsubgroup/GWAS_non_ppd_new
+```
+## 11. Early onset cidi
+```{bash}
+#!/bin/bash
+#SBATCH --job-name=GWAS_early_cidi
+#SBATCH --account=sens2017519
+#SBATCH --time=02-00:00:00
+#SBATCH --partition=core
+#SBATCH --ntasks=16
+#SBATCH -C mem256GB
+
+/home/thuydung/gcta_1.93.0beta/gcta64 \
+--mbgen /home/thuydung/proj0/ukb_bgen_list.txt \
+--sample /castor/project/proj/private/LuyiGrp_shared/GENO/ukb2222_imp_v3_addsex.sample \
+--grm-sparse /proj/sens2017519/nobackup/b2016326_nobackup/private/arvhar/results/grm/full \
+--fastGWA-mlm \
+--qcovar /castor/project/proj/private/LuyiGrp_shared/PIPELINE/FastGWA/covariates/pc10_age_fastGWA.txt \
+--covar /castor/project/proj/private/LuyiGrp_shared/PIPELINE/FastGWA/covariates/sex_fastGWA.txt \
+--pheno /home/thuydung/proj0/ukb_subgroup_proj0/pheno_early_cidi_gwas.txt \
+--maf 0.01 \
+--threads 16 \
+--out /home/thuydung/proj0/GWAS_MDDsubgroup/GWAS_earlycidi_new
+```
+
+## 12. Late onset cidi
+```{bash}
+#!/bin/bash
+#SBATCH --job-name=GWAS_late_cidi
+#SBATCH --account=sens2017519
+#SBATCH --time=02-00:00:00
+#SBATCH --partition=core
+#SBATCH --ntasks=16
+#SBATCH -C mem256GB
+
+/home/thuydung/gcta_1.93.0beta/gcta64 \
+--mbgen /home/thuydung/proj0/ukb_bgen_list.txt \
+--sample /castor/project/proj/private/LuyiGrp_shared/GENO/ukb2222_imp_v3_addsex.sample \
+--grm-sparse /proj/sens2017519/nobackup/b2016326_nobackup/private/arvhar/results/grm/full \
+--fastGWA-mlm \
+--qcovar /castor/project/proj/private/LuyiGrp_shared/PIPELINE/FastGWA/covariates/pc10_age_fastGWA.txt \
+--covar /castor/project/proj/private/LuyiGrp_shared/PIPELINE/FastGWA/covariates/sex_fastGWA.txt \
+--pheno /home/thuydung/proj0/ukb_subgroup_proj0/pheno_late_cidi_gwas.txt \
+--maf 0.01 \
+--threads 16 \
+--out /home/thuydung/proj0/GWAS_MDDsubgroup/GWAS_latecidi_new
+```
+
+## Comorbid anxiety
+```{bash}
+#!/bin/bash
+#SBATCH --job-name=anxiety
+#SBATCH --account=sens2017519
+#SBATCH --time=02-00:00:00
+#SBATCH --partition=core
+#SBATCH --ntasks=16
+#SBATCH -C mem256GB
+
+/home/thuydung/gcta_1.93.0beta/gcta64 \
+--mbgen /home/thuydung/proj0/ukb_bgen_list.txt \
+--sample /castor/project/proj/private/LuyiGrp_shared/GENO/ukb2222_imp_v3_addsex.sample \
+--grm-sparse /proj/sens2017519/nobackup/b2016326_nobackup/private/arvhar/results/grm/full \
+--fastGWA-mlm \
+--qcovar /castor/project/proj/private/LuyiGrp_shared/PIPELINE/FastGWA/covariates/pc10_age_fastGWA.txt \
+--covar /castor/project/proj/private/LuyiGrp_shared/PIPELINE/FastGWA/covariates/sex_fastGWA.txt \
+--pheno /home/thuydung/proj0/ukb_subgroup_proj0/pheno_anxiety_gwas.txt \
+--maf 0.01 \
+--threads 16 \
+--out /home/thuydung/proj0/GWAS_MDDsubgroup/GWAS_anxiety_new
+```
+
+## Non anxiety
+```{bash}
+#!/bin/bash
+#SBATCH --job-name=Non_anxiety
+#SBATCH --account=sens2017519
+#SBATCH --time=02-00:00:00
+#SBATCH --partition=core
+#SBATCH --ntasks=16
+#SBATCH -C mem256GB
+
+/home/thuydung/gcta_1.93.0beta/gcta64 \
+--mbgen /home/thuydung/proj0/ukb_bgen_list.txt \
+--sample /castor/project/proj/private/LuyiGrp_shared/GENO/ukb2222_imp_v3_addsex.sample \
+--grm-sparse /proj/sens2017519/nobackup/b2016326_nobackup/private/arvhar/results/grm/full \
+--fastGWA-mlm \
+--qcovar /castor/project/proj/private/LuyiGrp_shared/PIPELINE/FastGWA/covariates/pc10_age_fastGWA.txt \
+--covar /castor/project/proj/private/LuyiGrp_shared/PIPELINE/FastGWA/covariates/sex_fastGWA.txt \
+--pheno /home/thuydung/proj0/ukb_subgroup_proj0/pheno_nonanxiety_gwas.txt \
+--maf 0.01 \
+--threads 16 \
+--out /home/thuydung/proj0/GWAS_MDDsubgroup/GWAS_nonanxiety_new
+```
+
+## Atypical
+```{bash}
+#!/bin/bash
+#SBATCH --job-name=Atyp
+#SBATCH --account=sens2017519
+#SBATCH --time=02-00:00:00
+#SBATCH --partition=core
+#SBATCH --ntasks=16
+#SBATCH -C mem256GB
+
+/home/thuydung/gcta_1.93.0beta/gcta64 \
+--mbgen /home/thuydung/proj0/ukb_bgen_list.txt \
+--sample /castor/project/proj/private/LuyiGrp_shared/GENO/ukb2222_imp_v3_addsex.sample \
+--grm-sparse /proj/sens2017519/nobackup/b2016326_nobackup/private/arvhar/results/grm/full \
+--fastGWA-mlm \
+--qcovar /castor/project/proj/private/LuyiGrp_shared/PIPELINE/FastGWA/covariates/pc10_age_fastGWA.txt \
+--covar /castor/project/proj/private/LuyiGrp_shared/PIPELINE/FastGWA/covariates/sex_fastGWA.txt \
+--pheno /home/thuydung/proj0/ukb_subgroup_proj0/pheno_atypical_gwas.txt \
+--maf 0.01 \
+--threads 16 \
+--out /home/thuydung/proj0/GWAS_MDDsubgroup/GWAS_atypical_new
+```
+
+## Typical 
+```{bash}
+#!/bin/bash
+#SBATCH --job-name=Typ
+#SBATCH --account=sens2017519
+#SBATCH --time=02-00:00:00
+#SBATCH --partition=core
+#SBATCH --ntasks=16
+#SBATCH -C mem256GB
+
+/home/thuydung/gcta_1.93.0beta/gcta64 \
+--mbgen /home/thuydung/proj0/ukb_bgen_list.txt \
+--sample /castor/project/proj/private/LuyiGrp_shared/GENO/ukb2222_imp_v3_addsex.sample \
+--grm-sparse /proj/sens2017519/nobackup/b2016326_nobackup/private/arvhar/results/grm/full \
+--fastGWA-mlm \
+--qcovar /castor/project/proj/private/LuyiGrp_shared/PIPELINE/FastGWA/covariates/pc10_age_fastGWA.txt \
+--covar /castor/project/proj/private/LuyiGrp_shared/PIPELINE/FastGWA/covariates/sex_fastGWA.txt \
+--pheno /home/thuydung/proj0/ukb_subgroup_proj0/pheno_typ_gwas.txt \
+--maf 0.01 \
+--threads 16 \
+--out /home/thuydung/proj0/GWAS_MDDsubgroup/GWAS_typ_new
+```
+
+## Atypical cidi
+```{bash}
+#!/bin/bash
+#SBATCH --job-name=Atyp_cidi
+#SBATCH --account=sens2017519
+#SBATCH --time=02-00:00:00
+#SBATCH --partition=core
+#SBATCH --ntasks=16
+#SBATCH -C mem256GB
+
+/home/thuydung/gcta_1.93.0beta/gcta64 \
+--mbgen /home/thuydung/proj0/ukb_bgen_list.txt \
+--sample /castor/project/proj/private/LuyiGrp_shared/GENO/ukb2222_imp_v3_addsex.sample \
+--grm-sparse /proj/sens2017519/nobackup/b2016326_nobackup/private/arvhar/results/grm/full \
+--fastGWA-mlm \
+--qcovar /castor/project/proj/private/LuyiGrp_shared/PIPELINE/FastGWA/covariates/pc10_age_fastGWA.txt \
+--covar /castor/project/proj/private/LuyiGrp_shared/PIPELINE/FastGWA/covariates/sex_fastGWA.txt \
+--pheno /home/thuydung/proj0/ukb_subgroup_proj0/pheno_atypicalcidi_gwas.txt \
+--maf 0.01 \
+--threads 16 \
+--out /home/thuydung/proj0/GWAS_MDDsubgroup/GWAS_atypicalcidi_new
+```
+
+## Typical cidi
+```{bash}
+#!/bin/bash
+#SBATCH --job-name=Typ_cidi
+#SBATCH --account=sens2017519
+#SBATCH --time=02-00:00:00
+#SBATCH --partition=core
+#SBATCH --ntasks=16
+#SBATCH -C mem256GB
+
+/home/thuydung/gcta_1.93.0beta/gcta64 \
+--mbgen /home/thuydung/proj0/ukb_bgen_list.txt \
+--sample /castor/project/proj/private/LuyiGrp_shared/GENO/ukb2222_imp_v3_addsex.sample \
+--grm-sparse /proj/sens2017519/nobackup/b2016326_nobackup/private/arvhar/results/grm/full \
+--fastGWA-mlm \
+--qcovar /castor/project/proj/private/LuyiGrp_shared/PIPELINE/FastGWA/covariates/pc10_age_fastGWA.txt \
+--covar /castor/project/proj/private/LuyiGrp_shared/PIPELINE/FastGWA/covariates/sex_fastGWA.txt \
+--pheno /home/thuydung/proj0/ukb_subgroup_proj0/pheno_typcidi_gwas.txt \
+--maf 0.01 \
+--threads 16 \
+--out /home/thuydung/proj0/GWAS_MDDsubgroup/GWAS_typcidi_new
+```
+
+## Trauma
+```{bash}
+#!/bin/bash
+#SBATCH --job-name=Trauma
+#SBATCH --account=sens2017519
+#SBATCH --time=02-00:00:00
+#SBATCH --partition=core
+#SBATCH --ntasks=16
+#SBATCH -C mem512GB
+
+/home/thuydung/gcta_1.93.0beta/gcta64 \
+--mbgen /home/thuydung/proj0/ukb_bgen_list.txt \
+--sample /castor/project/proj/private/LuyiGrp_shared/GENO/ukb2222_imp_v3_addsex.sample \
+--grm-sparse /proj/sens2017519/nobackup/b2016326_nobackup/private/arvhar/results/grm/full \
+--fastGWA-mlm \
+--qcovar /castor/project/proj/private/LuyiGrp_shared/PIPELINE/FastGWA/covariates/pc10_age_fastGWA.txt \
+--covar /castor/project/proj/private/LuyiGrp_shared/PIPELINE/FastGWA/covariates/sex_fastGWA.txt \
+--pheno /home/thuydung/proj0/ukb_subgroup_proj0/pheno_trauma_gwas.txt \
+--maf 0.01 \
+--threads 16 \
+--out /home/thuydung/proj0/GWAS_MDDsubgroup/GWAS_trauma_new
+```
+```{bash}
+#!/bin/bash
+#SBATCH --job-name=Trauma-p2
+#SBATCH --account=sens2017519
+#SBATCH --time=02-00:00:00
+#SBATCH --partition=core
+#SBATCH --ntasks=16
+#SBATCH -C mem256GB
+
+/home/thuydung/gcta_1.93.0beta/gcta64 \
+--mbgen /home/thuydung/proj0/ukb_bgen_list_12-22.txt \
+--sample /castor/project/proj/private/LuyiGrp_shared/GENO/ukb2222_imp_v3_addsex.sample \
+--grm-sparse /proj/sens2017519/nobackup/b2016326_nobackup/private/arvhar/results/grm/full \
+--fastGWA-mlm \
+--qcovar /castor/project/proj/private/LuyiGrp_shared/PIPELINE/FastGWA/covariates/pc10_age_fastGWA.txt \
+--covar /castor/project/proj/private/LuyiGrp_shared/PIPELINE/FastGWA/covariates/sex_fastGWA.txt \
+--pheno /home/thuydung/proj0/ukb_subgroup_proj0/pheno_trauma_gwas.txt \
+--maf 0.01 \
+--threads 16 \
+--out /home/thuydung/proj0/GWAS_MDDsubgroup/GWAS_trauma_p2
+```
+## Non trauma
+```{bash}
+#!/bin/bash
+#SBATCH --job-name=Nontrauma
+#SBATCH --account=sens2017519
+#SBATCH --time=02-00:00:00
+#SBATCH --partition=core
+#SBATCH --ntasks=16
+#SBATCH -C mem256GB
+
+/home/thuydung/gcta_1.93.0beta/gcta64 \
+--mbgen /home/thuydung/proj0/ukb_bgen_list.txt \
+--sample /castor/project/proj/private/LuyiGrp_shared/GENO/ukb2222_imp_v3_addsex.sample \
+--grm-sparse /proj/sens2017519/nobackup/b2016326_nobackup/private/arvhar/results/grm/full \
+--fastGWA-mlm \
+--qcovar /castor/project/proj/private/LuyiGrp_shared/PIPELINE/FastGWA/covariates/pc10_age_fastGWA.txt \
+--covar /castor/project/proj/private/LuyiGrp_shared/PIPELINE/FastGWA/covariates/sex_fastGWA.txt \
+--pheno /home/thuydung/proj0/ukb_subgroup_proj0/pheno_nontrauma_gwas.txt \
+--maf 0.01 \
+--threads 16 \
+--out /home/thuydung/proj0/GWAS_MDDsubgroup/GWAS_nontrauma_new
+```
+
+## Minor impairment
+```{bash}
+#!/bin/bash
+#SBATCH --job-name=Minor
+#SBATCH --account=sens2017519
+#SBATCH --time=02-00:00:00
+#SBATCH --partition=core
+#SBATCH --ntasks=16
+#SBATCH -C mem256GB
+
+/home/thuydung/gcta_1.93.0beta/gcta64 \
+--mbgen /home/thuydung/proj0/ukb_bgen_list.txt \
+--sample /castor/project/proj/private/LuyiGrp_shared/GENO/ukb2222_imp_v3_addsex.sample \
+--grm-sparse /proj/sens2017519/nobackup/b2016326_nobackup/private/arvhar/results/grm/full \
+--fastGWA-mlm \
+--qcovar /castor/project/proj/private/LuyiGrp_shared/PIPELINE/FastGWA/covariates/pc10_age_fastGWA.txt \
+--covar /castor/project/proj/private/LuyiGrp_shared/PIPELINE/FastGWA/covariates/sex_fastGWA.txt \
+--pheno /home/thuydung/proj0/ukb_subgroup_proj0/pheno_minor_impair_gwas.txt \
+--maf 0.01 \
+--threads 16 \
+--out /home/thuydung/proj0/GWAS_MDDsubgroup/GWAS_minor_impair_new
+```
+
+## Major impairment
+```{bash}
+#!/bin/bash
+#SBATCH --job-name=Major
+#SBATCH --account=sens2017519
+#SBATCH --time=02-00:00:00
+#SBATCH --partition=core
+#SBATCH --ntasks=16
+#SBATCH -C mem256GB
+
+/home/thuydung/gcta_1.93.0beta/gcta64 \
+--mbgen /home/thuydung/proj0/ukb_bgen_list.txt \
+--sample /castor/project/proj/private/LuyiGrp_shared/GENO/ukb2222_imp_v3_addsex.sample \
+--grm-sparse /proj/sens2017519/nobackup/b2016326_nobackup/private/arvhar/results/grm/full \
+--fastGWA-mlm \
+--qcovar /castor/project/proj/private/LuyiGrp_shared/PIPELINE/FastGWA/covariates/pc10_age_fastGWA.txt \
+--covar /castor/project/proj/private/LuyiGrp_shared/PIPELINE/FastGWA/covariates/sex_fastGWA.txt \
+--pheno /home/thuydung/proj0/ukb_subgroup_proj0/pheno_major_impair_gwas.txt \
+--maf 0.01 \
+--threads 16 \
+--out /home/thuydung/proj0/GWAS_MDDsubgroup/GWAS_major_impair_new
+```
+
+## Moderate impairment
+```{bash}
+#!/bin/bash
+#SBATCH --job-name=Moderate_impair
+#SBATCH --account=sens2017519
+#SBATCH --time=02-00:00:00
+#SBATCH --partition=core
+#SBATCH --ntasks=16
+#SBATCH -C mem256GB
+
+/home/thuydung/gcta_1.93.0beta/gcta64 \
+--mbgen /home/thuydung/proj0/ukb_bgen_list.txt \
+--sample /castor/project/proj/private/LuyiGrp_shared/GENO/ukb2222_imp_v3_addsex.sample \
+--grm-sparse /proj/sens2017519/nobackup/b2016326_nobackup/private/arvhar/results/grm/full \
+--fastGWA-mlm \
+--qcovar /castor/project/proj/private/LuyiGrp_shared/PIPELINE/FastGWA/covariates/pc10_age_fastGWA.txt \
+--covar /castor/project/proj/private/LuyiGrp_shared/PIPELINE/FastGWA/covariates/sex_fastGWA.txt \
+--pheno /home/thuydung/proj0/ukb_subgroup_proj0/pheno_moderate_impair_gwas.txt \
+--maf 0.01 \
+--threads 16 \
+--out /home/thuydung/proj0/GWAS_MDDsubgroup/GWAS_moderate_impair_new
+```
+## Mdd study 0
+```{bash}
+#!/bin/bash
+#SBATCH --job-name=study0
+#SBATCH --account=sens2017519
+#SBATCH --time=02-00:00:00
+#SBATCH --partition=core
+#SBATCH --ntasks=16
+#SBATCH -C mem512GB
+
+/home/thuydung/gcta_1.93.0beta/gcta64 \
+--mbgen /home/thuydung/proj0/ukb_bgen_list.txt \
+--sample /castor/project/proj/private/LuyiGrp_shared/GENO/ukb2222_imp_v3_addsex.sample \
+--grm-sparse /proj/sens2017519/nobackup/b2016326_nobackup/private/arvhar/results/grm/full \
+--fastGWA-mlm \
+--qcovar /castor/project/proj/private/LuyiGrp_shared/PIPELINE/FastGWA/covariates/pc10_age_fastGWA.txt \
+--covar /castor/project/proj/private/LuyiGrp_shared/PIPELINE/FastGWA/covariates/sex_fastGWA.txt \
+--pheno /home/thuydung/proj0/ukb_subgroup_proj0/pheno_mdd_study0_gwas.txt \
+--maf 0.01 \
+--threads 16 \
+--out /home/thuydung/proj0/GWAS_MDDsubgroup/GWAS_mdd_study0
+```
+
+## mdd1
+```{bash}
+#!/bin/bash
+#SBATCH --job-name=GWAS_mdd1
+#SBATCH --account=sens2017519
+#SBATCH --time=02-00:00:00
+#SBATCH --partition=core
+#SBATCH --ntasks=16
+#SBATCH -C mem512GB
+
+/home/thuydung/gcta_1.93.0beta/gcta64 \
+--mbgen /home/thuydung/proj0/ukb_bgen_list.txt \
+--sample /castor/project/proj/private/LuyiGrp_shared/GENO/ukb2222_imp_v3_addsex.sample \
+--grm-sparse /proj/sens2017519/nobackup/b2016326_nobackup/private/arvhar/results/grm/full \
+--fastGWA-mlm \
+--qcovar /castor/project/proj/private/LuyiGrp_shared/PIPELINE/FastGWA/covariates/pc10_age_fastGWA.txt \
+--covar /castor/project/proj/private/LuyiGrp_shared/PIPELINE/FastGWA/covariates/sex_fastGWA.txt \
+--pheno /home/thuydung/proj0/ukb_subgroup_proj0/phen_mdd1_gwas.txt \
+--maf 0.01 \
+--threads 16 \
+--out /home/thuydung/proj0/GWAS_MDDsubgroup/GWAS_mdd1
+```
+
+## mdd2
+```{bash}
+#!/bin/bash
+#SBATCH --job-name=GWAS_mdd2
+#SBATCH --account=sens2017519
+#SBATCH --time=02-00:00:00
+#SBATCH --partition=core
+#SBATCH --ntasks=16
+#SBATCH -C mem256GB
+
+/home/thuydung/gcta_1.93.0beta/gcta64 \
+--mbgen /home/thuydung/proj0/ukb_bgen_list.txt \
+--sample /castor/project/proj/private/LuyiGrp_shared/GENO/ukb2222_imp_v3_addsex.sample \
+--grm-sparse /proj/sens2017519/nobackup/b2016326_nobackup/private/arvhar/results/grm/full \
+--fastGWA-mlm \
+--qcovar /castor/project/proj/private/LuyiGrp_shared/PIPELINE/FastGWA/covariates/pc10_age_fastGWA.txt \
+--covar /castor/project/proj/private/LuyiGrp_shared/PIPELINE/FastGWA/covariates/sex_fastGWA.txt \
+--pheno /home/thuydung/proj0/ukb_subgroup_proj0/phen_mdd2_gwas.txt \
+--maf 0.01 \
+--threads 16 \
+--out /home/thuydung/proj0/GWAS_MDDsubgroup/GWAS_mdd2
+```
+
+## mdd3
+```{bash}
+#!/bin/bash
+#SBATCH --job-name=GWAS_mdd3
+#SBATCH --account=sens2017519
+#SBATCH --time=02-00:00:00
+#SBATCH --partition=core
+#SBATCH --ntasks=16
+#SBATCH -C mem256GB
+
+/home/thuydung/gcta_1.93.0beta/gcta64 \
+--mbgen /home/thuydung/proj0/ukb_bgen_list.txt \
+--sample /castor/project/proj/private/LuyiGrp_shared/GENO/ukb2222_imp_v3_addsex.sample \
+--grm-sparse /proj/sens2017519/nobackup/b2016326_nobackup/private/arvhar/results/grm/full \
+--fastGWA-mlm \
+--qcovar /castor/project/proj/private/LuyiGrp_shared/PIPELINE/FastGWA/covariates/pc10_age_fastGWA.txt \
+--covar /castor/project/proj/private/LuyiGrp_shared/PIPELINE/FastGWA/covariates/sex_fastGWA.txt \
+--pheno /home/thuydung/proj0/ukb_subgroup_proj0/phen_mdd3_gwas.txt \
+--maf 0.01 \
+--threads 16 \
+--out /home/thuydung/proj0/GWAS_MDDsubgroup/GWAS_mdd3
+```
+
+## mdd7_antidep
+```{bash}
+#!/bin/bash
+#SBATCH --job-name=GWAS_mdd7
+#SBATCH --account=sens2017519
+#SBATCH --time=02-00:00:00
+#SBATCH --partition=core
+#SBATCH --ntasks=16
+#SBATCH -C mem256GB
+
+/home/thuydung/gcta_1.93.0beta/gcta64 \
+--mbgen /home/thuydung/proj0/ukb_bgen_list.txt \
+--sample /castor/project/proj/private/LuyiGrp_shared/GENO/ukb2222_imp_v3_addsex.sample \
+--grm-sparse /proj/sens2017519/nobackup/b2016326_nobackup/private/arvhar/results/grm/full \
+--fastGWA-mlm \
+--qcovar /castor/project/proj/private/LuyiGrp_shared/PIPELINE/FastGWA/covariates/pc10_age_fastGWA.txt \
+--covar /castor/project/proj/private/LuyiGrp_shared/PIPELINE/FastGWA/covariates/sex_fastGWA.txt \
+--pheno /home/thuydung/proj0/ukb_subgroup_proj0/phen_mdd7antidep_gwas.txt \
+--maf 0.01 \
+--threads 16 \
+--out /home/thuydung/proj0/GWAS_MDDsubgroup/GWAS_mdd7antidep
+```
+
+## mdd8_cidi
+```{bash}
+#!/bin/bash
+#SBATCH --job-name=GWAS_mdd8
+#SBATCH --account=sens2017519
+#SBATCH --time=02-00:00:00
+#SBATCH --partition=core
+#SBATCH --ntasks=16
+#SBATCH -C mem256GB
+
+/home/thuydung/gcta_1.93.0beta/gcta64 \
+--mbgen /home/thuydung/proj0/ukb_bgen_list.txt \
+--sample /castor/project/proj/private/LuyiGrp_shared/GENO/ukb2222_imp_v3_addsex.sample \
+--grm-sparse /proj/sens2017519/nobackup/b2016326_nobackup/private/arvhar/results/grm/full \
+--fastGWA-mlm \
+--qcovar /castor/project/proj/private/LuyiGrp_shared/PIPELINE/FastGWA/covariates/pc10_age_fastGWA.txt \
+--covar /castor/project/proj/private/LuyiGrp_shared/PIPELINE/FastGWA/covariates/sex_fastGWA.txt \
+--pheno /home/thuydung/proj0/ukb_subgroup_proj0/phen_mdd8cidi_gwas.txt \
+--maf 0.01 \
+--threads 16 \
+--out /home/thuydung/proj0/GWAS_MDDsubgroup/GWAS_mdd8cidi
+```
+
+## mdd9
+```{bash}
+#!/bin/bash
+#SBATCH --job-name=GWAS_mdd9
+#SBATCH --account=sens2017519
+#SBATCH --time=02-00:00:00
+#SBATCH --partition=core
+#SBATCH --ntasks=16
+#SBATCH -C mem512GB
+
+/home/thuydung/gcta_1.93.0beta/gcta64 \
+--mbgen /home/thuydung/proj0/ukb_bgen_list.txt \
+--sample /castor/project/proj/private/LuyiGrp_shared/GENO/ukb2222_imp_v3_addsex.sample \
+--grm-sparse /proj/sens2017519/nobackup/b2016326_nobackup/private/arvhar/results/grm/full \
+--fastGWA-mlm \
+--qcovar /castor/project/proj/private/LuyiGrp_shared/PIPELINE/FastGWA/covariates/pc10_age_fastGWA.txt \
+--covar /castor/project/proj/private/LuyiGrp_shared/PIPELINE/FastGWA/covariates/sex_fastGWA.txt \
+--pheno /home/thuydung/proj0/ukb_subgroup_proj0/phen_mdd9_gwas.txt \
+--maf 0.01 \
+--threads 16 \
+--out /home/thuydung/proj0/GWAS_MDDsubgroup/GWAS_mdd9
+```
+# Checking GWAS results
+```{bash}
+# GWAS results are here
+cd /home/thuydung/proj0/GWAS_MDDsubgroup
+
+# To count number of fields
+awk "{print NF}" < GWAS_earlycidi_new.fastGWA | uniq
+
+# To select only few col
+awk '{print $1 $2}' GWAS_earlycidi_new.fastGWA
+
+# To filder values in rows
+awk '{print $10}' GWAS_early_new.fastGWA | awk '{ if($1 <= 5*10^-8) { print }}'
+
+awk '{ if($10 <= 5*10^-8) { print }}' GWAS_early_new.fastGWA | head
+
+awk '{ if($10 <= 5e-8) { print }}' GWAS_mdd7antidep.fastGWA | wc
+
+```
+
+
+
+
