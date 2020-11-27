@@ -1,0 +1,297 @@
+---
+title: "LDSC round 2020 November"
+author: "Thi Thuy Dung Nguyen"
+date: "11/9/2020"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+# Folder paths
+```{bash}
+ssh thingu@vector
+
+# LDSC directory
+cd /nfs/home/thingu/project0/ldsc_analysis
+
+# GWAS folder
+cd /nfs/home/thingu/project0/GWAS_20nov/GWAS_md_20nov
+cd /nfs/home/thingu/project0/GWAS_20nov/GWAS_subtype_20nov
+cd /nfs/home/thingu/project0/GWAS_20nov/GWAScidi_subtype_20nov
+
+# LDSC sumstats folder
+cd /nfs/home/thingu/project0/ldsc_analysis/ldsc_20nov/sumstats_md_20nov
+cd /nfs/home/thingu/project0/ldsc_analysis/ldsc_20nov/sumstats_subtype_20nov
+cd /nfs/home/thingu/project0/ldsc_analysis/ldsc_20nov/sumstatscidi_subtype_20nov
+
+# LDSC results folder
+cd /nfs/home/thingu/project0/ldsc_analysis/ldsc_20nov/result_md_20nov
+cd /nfs/home/thingu/project0/ldsc_analysis/ldsc_20nov/result_subtype_20nov
+cd /nfs/home/thingu/project0/ldsc_analysis/ldsc_20nov/resultcidi_subtype_20nov
+
+# HDL munge folder
+cd /nfs/home/thingu/project0/hdl_analysis/hdl_20nov/hdlsumstat_subtype_20nov
+cd /nfs/home/thingu/project0/hdl_analysis/hdl_20nov/hdlsumstatcidi_subtype_20nov
+
+# HLD result folder
+cd /nfs/home/thingu/project0/hdl_analysis/hdl_20nov/hdlresult_subtype_20nov
+cd /nfs/home/thingu/project0/hdl_analysis/hdl_20nov/hdlresultcidi_subtype_20nov
+
+```
+# Activate LDSC on Uppmax
+```{bash}
+# Activate conda and ldsc. Add path to the batch file when submit task
+/nfs/home/thingu/anaconda3/bin/conda activate ldsc
+
+# To deactivate
+conda deactivate
+```
+# LDCS for heritability
+## MD definitions
+Sumstats
+```{bash}
+LDSCDIR="/nfs/home/thingu/ldsc"
+GWASFOLDER="/nfs/home/thingu/project0/GWAS_20nov/GWAS_md_20nov"
+ALLELE="/nfs/home/thingu/project0/ldsc_analysis/w_hm3.noMHC.snplist"
+OUTFOLDER="/nfs/home/thingu/project0/ldsc_analysis/ldsc_20nov/sumstats_md_20nov"
+
+for line in $(ls /nfs/home/thingu/project0/GWAS_20nov/GWAS_md_20nov | tee ); do
+$LDSCDIR/munge_sumstats.py \
+--sumstats $GWASFOLDER/$line \
+--snp SNP \
+--signed-sumstats BETA,0 \
+--p P \
+--merge-alleles $ALLELE \
+--info INFO \
+--chunksize 500000 \
+--out $OUTFOLDER/$line
+done
+```
+LDSC
+```{bash}
+LDSCDIR="/nfs/home/thingu/ldsc"
+SUMSTATFOLDER="/nfs/home/thingu/project0/ldsc_analysis/ldsc_20nov/sumstats_md_20nov"
+REFLD="/nfs/home/thingu/project0/ldsc_analysis/eur_w_ld_chr/"
+OUTFOLDER="/nfs/home/thingu/project0/ldsc_analysis/ldsc_20nov/result_md_20nov"
+
+for line in $(ls $SUMSTATFOLDER/ | tr '\n' '\n' | grep .gz| tee); do
+$LDSCDIR/ldsc.py \
+--h2 $SUMSTATFOLDER/$line \
+--ref-ld-chr $REFLD \
+--w-ld-chr $REFLD \
+--out $OUTFOLDER/$line
+done
+```
+## Normal subtypes
+Sumstats
+```{bash}
+LDSCDIR="/nfs/home/thingu/ldsc"
+GWASFOLDER="/nfs/home/thingu/project0/GWAS_20nov/GWAS_subtype_20nov"
+ALLELE="/nfs/home/thingu/project0/ldsc_analysis/w_hm3.noMHC.snplist"
+OUTFOLDER="/nfs/home/thingu/project0/ldsc_analysis/ldsc_20nov/sumstats_subtype_20nov"
+
+for line in $(ls /nfs/home/thingu/project0/GWAS_20nov/GWAS_subtype_20nov | tee ); do
+$LDSCDIR/munge_sumstats.py \
+--sumstats $GWASFOLDER/$line \
+--snp SNP \
+--signed-sumstats BETA,0 \
+--p P \
+--merge-alleles $ALLELE \
+--info INFO \
+--chunksize 500000 \
+--out $OUTFOLDER/$line
+done
+```
+LDSC
+```{bash}
+LDSCDIR="/nfs/home/thingu/ldsc"
+SUMSTATFOLDER="/nfs/home/thingu/project0/ldsc_analysis/ldsc_20nov/sumstats_subtype_20nov"
+REFLD="/nfs/home/thingu/project0/ldsc_analysis/eur_w_ld_chr/"
+OUTFOLDER="/nfs/home/thingu/project0/ldsc_analysis/ldsc_20nov/result_subtype_20nov"
+
+for line in $(ls $SUMSTATFOLDER/ | tr '\n' '\n' | grep .gz| tee); do
+$LDSCDIR/ldsc.py \
+--h2 $SUMSTATFOLDER/$line \
+--ref-ld-chr $REFLD \
+--w-ld-chr $REFLD \
+--out $OUTFOLDER/$line
+done
+```
+
+## CIDI subtypes
+Sumstats
+```{bash}
+LDSCDIR="/nfs/home/thingu/ldsc"
+GWASFOLDER="/nfs/home/thingu/project0/GWAS_20nov/GWAScidi_subtype_20nov"
+ALLELE="/nfs/home/thingu/project0/ldsc_analysis/w_hm3.noMHC.snplist"
+OUTFOLDER="/nfs/home/thingu/project0/ldsc_analysis/ldsc_20nov/sumstatscidi_subtype_20nov"
+
+for line in $(ls /nfs/home/thingu/project0/GWAS_20nov/GWAScidi_subtype_20nov | tee); do
+$LDSCDIR/munge_sumstats.py \
+--sumstats $GWASFOLDER/$line \
+--snp SNP \
+--signed-sumstats BETA,0 \
+--p P \
+--merge-alleles $ALLELE \
+--info INFO \
+--chunksize 500000 \
+--out $OUTFOLDER/$line
+done
+```
+LDSC
+```{bash}
+LDSCDIR="/nfs/home/thingu/ldsc"
+SUMSTATFOLDER="/nfs/home/thingu/project0/ldsc_analysis/ldsc_20nov/sumstatscidi_subtype_20nov"
+REFLD="/nfs/home/thingu/project0/ldsc_analysis/eur_w_ld_chr/"
+OUTFOLDER="/nfs/home/thingu/project0/ldsc_analysis/ldsc_20nov/resultcidi_subtype_20nov"
+
+for line in $(ls $SUMSTATFOLDER/ | tr '\n' '\n' | grep .gz| tee); do
+$LDSCDIR/ldsc.py \
+--h2 $SUMSTATFOLDER/$line \
+--ref-ld-chr $REFLD \
+--w-ld-chr $REFLD \
+--out $OUTFOLDER/$line
+done
+```
+
+# HLD for genetic correlation
+## Normal subtypes
+Munge data
+```{bash}
+HDL_WRANGLE="/nfs/home/thingu/HDL/HDL.data.wrangling.R"
+GWASFOLDER="/nfs/home/thingu/project0/GWAS_20nov/GWAS_subtype_20nov"
+eigenarray="/nfs/projects/HDL/reference_panels/UKB_imputed_SVD_eigen99_extraction"
+
+OUTFOLDER="/nfs/home/thingu/project0/hdl_analysis/hdl_20nov/hdlsumstat_subtype_20nov"
+LOGOUT="/nfs/home/thingu/project0/hdl_analysis/hdl_20nov/hdlsumstat_subtype_20nov"
+
+for line in $(ls $GWASFOLDER/ | tr '\n' '\n' | tee); do
+Rscript $HDL_WRANGLE \
+gwas.file=$GWASFOLDER/$line \
+LD.path=$eigenarray \
+SNP=SNP A1=A1 A2=A2 N=N b=BETA se=SE \
+output.file=$OUTFOLDER/$line \
+log.file=$LOGOUT/$line
+done
+```
+
+HDL
+```{bash}
+MUNGESUMSTATFOLDER="/nfs/home/thingu/project0/hdl_analysis/hdl_20nov/hdlsumstat_subtype_20nov"
+ls $MUNGESUMSTATFOLDER/ | tr '\n' '\n' | grep .rds| tee
+```
+
+```{bash}
+HDL_RG="/nfs/home/thingu/HDL/HDL.parallel.run.R"
+eigenarray="/nfs/projects/HDL/reference_panels/UKB_imputed_SVD_eigen99_extraction"
+MUNGESUMSTATFOLDER="/nfs/home/thingu/project0/hdl_analysis/hdl_20nov/hdlsumstat_subtype_20nov"
+OUTFOLDER="/nfs/home/thingu/project0/hdl_analysis/hdl_20nov/hdlresult_subtype_20nov"
+mungefile=(
+pheno_anxiety_20nov.txt.fastGWA.hdl.rds 
+pheno_no_anxiety_20nov.txt.fastGWA.hdl.rds 
+pheno_typical_20nov.txt.fastGWA.hdl.rds
+pheno_atypical_20nov.txt.fastGWA.hdl.rds
+pheno_early_20nov.txt.fastGWA.hdl.rds
+pheno_late_20nov.txt.fastGWA.hdl.rds
+pheno_mild_20nov.txt.fastGWA.hdl.rds
+pheno_severe_20nov.txt.fastGWA.hdl.rds
+pheno_suicide_20nov.txt.fastGWA.hdl.rds
+pheno_no_suicide_20nov.txt.fastGWA.hdl.rds
+pheno_single_20nov.txt.fastGWA.hdl.rds
+pheno_recurrent_20nov.txt.fastGWA.hdl.rds
+pheno_mild_impair_20nov.txt.fastGWA.hdl.rds
+pheno_moderate_impair_20nov.txt.fastGWA.hdl.rds
+pheno_severe_impair_20nov.txt.fastGWA.hdl.rds
+pheno_mild_impair_20nov.txt.fastGWA.hdl.rds
+)
+order=(0 2 4 6 8 10 12 13 14)
+
+for i in ${order[*]}; do
+echo '#!/bin/bash
+#SBATCH --job-name='"$i"'
+#SBATCH --time=02-00:00:00
+#SBATCH --partition=core
+#SBATCH --ntasks=8
+#SBATCH --mem=8G'"
+
+Rscript $HDL_RG \
+gwas1.df=$MUNGESUMSTATFOLDER/${mungefile[$i]} \
+gwas2.df=$MUNGESUMSTATFOLDER/${mungefile[$i+1]} \
+LD.path=$eigenarray \
+output.file=$OUTFOLDER/${mungefile[$i]} \
+numCores=8
+
+" > ${mungefile[$i]}.sh
+chmod 700 ${mungefile[$i]}.sh
+sbatch ${mungefile[$i]}.sh
+rm ${mungefile[$i]}.sh
+done
+```
+
+## CIDI subtypes
+Munge data
+```{bash}
+HDL_WRANGLE="/nfs/home/thingu/HDL/HDL.data.wrangling.R"
+GWASFOLDER="/nfs/home/thingu/project0/GWAS_20nov/GWAScidi_subtype_20nov"
+eigenarray="/nfs/projects/HDL/reference_panels/UKB_imputed_SVD_eigen99_extraction"
+
+OUTFOLDER="/nfs/home/thingu/project0/hdl_analysis/hdl_20nov/hdlsumstatcidi_subtype_20nov"
+LOGOUT="/nfs/home/thingu/project0/hdl_analysis/hdl_20nov/hdlsumstatcidi_subtype_20nov"
+
+for line in $(ls $GWASFOLDER/ | tr '\n' '\n' | tee); do
+Rscript $HDL_WRANGLE \
+gwas.file=$GWASFOLDER/$line \
+LD.path=$eigenarray \
+SNP=SNP A1=A1 A2=A2 N=N b=BETA se=SE \
+output.file=$OUTFOLDER/$line \
+log.file=$LOGOUT/$line
+done
+```
+
+HDL
+```{bash}
+MUNGESUMSTATFOLDER="/nfs/home/thingu/project0/hdl_analysis/hdl_20nov/hdlsumstatcidi_subtype_20nov"
+ls $MUNGESUMSTATFOLDER/ | tr '\n' '\n' | grep .rds| tee
+```
+
+```{bash}
+HDL_RG="/nfs/home/thingu/HDL/HDL.parallel.run.R"
+eigenarray="/nfs/projects/HDL/reference_panels/UKB_imputed_SVD_eigen99_extraction"
+MUNGESUMSTATFOLDER="/nfs/home/thingu/project0/hdl_analysis/hdl_20nov/hdlsumstatcidi_subtype_20nov"
+OUTFOLDER="/nfs/home/thingu/project0/hdl_analysis/hdl_20nov/hdlresultcidi_subtype_20nov"
+mungefile=(
+pheno_anxiety_cidi_20nov.txt.fastGWA.hdl.rds
+pheno_no_anxiety_cidi_20nov.txt.fastGWA.hdl.rds
+pheno_atypical_cidi_20nov.txt.fastGWA.hdl.rds
+pheno_typical_cidi_20nov.txt.fastGWA.hdl.rds
+pheno_early_cidi_20nov.txt.fastGWA.hdl.rds
+pheno_late_cidi_20nov.txt.fastGWA.hdl.rds
+pheno_mild_cidi_20nov.txt.fastGWA.hdl.rds
+pheno_severe_cidi_20nov.txt.fastGWA.hdl.rds
+pheno_suicide_cidi_20nov.txt.fastGWA.hdl.rds
+pheno_no_suicide_cidi_20nov.txt.fastGWA.hdl.rds
+pheno_recurrent_cidi_20nov.txt.fastGWA.hdl.rds
+pheno_single_cidi_20nov.txt.fastGWA.hdl.rds
+)
+order=(0 2 4 6 8 10)
+
+for i in ${order[*]}; do
+echo '#!/bin/bash
+#SBATCH --job-name='"$i"'
+#SBATCH --time=02-00:00:00
+#SBATCH --partition=core
+#SBATCH --ntasks=8
+#SBATCH --mem=8G'"
+
+Rscript $HDL_RG \
+gwas1.df=$MUNGESUMSTATFOLDER/${mungefile[$i]} \
+gwas2.df=$MUNGESUMSTATFOLDER/${mungefile[$i+1]} \
+LD.path=$eigenarray \
+output.file=$OUTFOLDER/${mungefile[$i]}.Rout \
+numCores=8
+
+" > ${mungefile[$i]}.sh
+chmod 700 ${mungefile[$i]}.sh
+sbatch ${mungefile[$i]}.sh
+rm ${mungefile[$i]}.sh
+done
+```
