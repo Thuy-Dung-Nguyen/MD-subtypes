@@ -1,0 +1,732 @@
+---
+title: "MD population definition"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+This document is a supplementary file for article:
+
+Genetic heterogeneity and subtypes of major depression
+
+Thuy-Dung Nguyen, M.Sc.(1,2); Arvid Harder, B.Sc.(1); Ying Xiong, M.Sc.(1); Kaarina Kowalec, Ph.D.(1,3); Sara Hägg, Ph.D.(1); Ralf Kuja-Halkola, Ph.D.(1); Christina Dalman, M.D.(2); Patrick F Sullivan, M.D. FRANZCP(1,4); Yi Lu, Ph.D.(1,2)
+
+(1)	Department of Medical Epidemiology and Biostatistics, Karolinska Institutet, Stockholm, Sweden
+(2)	Department of Global Public Health, Karolinska Institute, Stockholm, Sweden
+(3)	College of Pharmacy, University of Manitoba, Winnipeg, Canada
+(4)	Department of Genetics and Psychiatry, University of North Carolina, Chapel Hill, NC, USA
+
+Corresponding author: 
+Yi Lu, Ph.D.
+Nobels Väg 12A, 
+Solna, Sweden 17177  
+lu.yi@ki.se 
+Responsible for this code file
+Thuy-Dung Nguyen
+Nobels Väg 12A, 
+Solna, Sweden 17177  
+thuy.dung.nguyen@ki.se
+
+In this document, we presents R code to derive major depression cases, controls, and exclusion criteria using UK Biobank data (UKB)
+# Load packages
+```{r setup, include=FALSE, echo=FALSE}
+library(data.table)
+library(tidyverse)
+```
+
+# Load data
+Raw data was extracted from UKB phenotype data, the numbers appeared in field names are corresponding to the UKB field ID. Details information and meta-data of UKB can be found here: http://biobank.ctsu.ox.ac.uk/crystal/
+
+List of medication code is here
+Ref: https://www.ncbi.nlm.nih.gov/pmc/articles/PMC6877131/
+We extracted a list of medication as in Supplementary table S2.4 with class 1 = antidepressant, 2 = anti-psychotics, 3 = lithium.
+
+The datasets (.tab file) mentioned below were extracted from 2 data files named ukb21472.tab (date 180427) and ukb22140.tab (date 180524) in a server. To know which variables are stored in each .tab file, see the extraction code in UKB_variable_extraction.Rmd.
+
+```{r, echo=FALSE}
+path180427 <- "<path>/ukb180427_21472_p0.tab"
+raw180427<- fread(path180427, header = TRUE)
+name_180427 = names(raw180427)
+names(raw180427)[1] = "eid"
+raw180427[,2:7][raw180427[,2:7] == -3 |raw180427[,2:7] == -1] <- NA
+
+path20445_20544 = "<path>/ukb180524_20445_20544.tab"
+rawdf2<- fread(path20445_20544, header = TRUE)
+names(rawdf2)[1] = "eid"
+rawdf2[,2:18][rawdf2[,2:18] == -818 |rawdf2[,2:18] == -313|rawdf2[,2:18] == -121|rawdf2[,2:18] == -819] <- NA
+
+pathdrug <- "<path>/UKB_f20003_antidep_psy_lithi.txt"
+dfdrug <- fread(pathdrug, header = T)
+
+path20003 <- "<path>/ukb180427_f20003.tab"
+raw20003 <- fread(path20003, header = T)
+names(raw20003)[1] = "eid"
+
+path20441_20446_20433 <- "<path>/ukb180524_20441_20446_20433.tab"
+raw20441_20446_20433 <- fread(path20441_20446_20433, header = T)
+names(raw20441_20446_20433)[1] = "eid"
+raw20441_20446_20433[,2:4][raw20441_20446_20433[,2:4] == -121 |raw20441_20446_20433[,2:4] == -818] <- NA
+
+pathcidi  <- "<path>/ukb180524_CIDI_criteria.tab"
+rawcidi_ab <- fread(pathcidi, header = T)
+names(rawcidi_ab)[1] = "eid"
+rawcidi_ab[,2:18][rawcidi_ab[,2:18] == -121 |rawcidi_ab[,2:18] == -818] <- NA
+
+path31 <- "<path>/ukb180427_31.csv"
+raw31 <- fread(path31, header = T)
+colnames(raw31) = c("eid", "sex")
+
+pathbirth <- "<path>/ukb180427_2734.tab"
+rawbirth <- fread(pathbirth, header = T)
+names(rawbirth)[1] = "eid"
+rawbirth[,2:4][rawbirth[,2:4] == -3] <- NA
+```
+
+# I. DEFINE MAJOR DEPRESSION CASES
+We defined major depression in UKB based on 7 definitions:
+1. CIDI-based MDD
+2. ICD-coded MDD
+3. Probable MD
+4. Self-reported MD
+5. MD cardinal symptoms
+6. Help-seeking MD
+7. Antidepressant use
+MD15 is the outer merge of 5 definitions 1-5 used in study 0.
+
+***************H***********************H****************
+# 1. CIDI-based MDD
+Define 2 groups: lifetime and current CIDI MDD. CIDI MDD cases if in at least 1 definition.
+This variable is computed based on method used in Na Cai et al. 
+https://www.nature.com/articles/s41588-020-0594-5
+
+## Criteria:
+
+Lifetime MDD
+- 5/8 criteria A1-A9 with at least one criteria A1 or A2
+
+A1 (UKB 20446) = Yes
+A2 (UKB 20441) = Yes
+
+A3 (UKB 20536) = 1/2/3
+A4 (UKB 20532) = Yes
+A6 (UKB 20449) = Yes
+A7 (UKB 20450) = Yes
+A8 (UKB 20435) = Yes
+A9 (UKB 20437) = Yes
+
+- Plus Impact on normal roles during worst period of depression
+B (UKB 20440) =	3 (a lot)
+
+- Plus Not substance abuse
+C  (UKB 41202 + 41204) Not codes F10-F19
+
+- Plus Not SCZ or pyschotic	
+D (UKB 41202 + 41204)	Not codes F20-F29
+
+- Plus Not Maniac
+E (UKB 41202 + 41204) Not codes F30
+
+************
+Current MDD: 
+
+- 5/9 criteria with at least one criteria A1 or A2
+
+A1 (UKB 20510) = 4
+A2 (UKB 20514) = 4
+
+A3 (UKB 20511) = 4
+A4 (UKB 20517) = 4
+A5 (UKB 20518) = 4
+A6 (UKB 20519) = 4
+A7 (UKB 20507) = 4
+A8 (UKB 20508) = 4
+A9 (UKB 20513) = 4
+
+- Plus Impact on normal roles during worst period of depression
+B (UKB 20440) =	3 (a lot)
+
+- Plus Not substance abuse
+C  (UKB 41202 + 41204) Not codes F10-F19
+
+- Plus Not SCZ or psychotic	
+D (UKB 41202 + 41204)	Not codes F20-F29
+
+- Plus Not Maniac
+E (UKB 41202 + 41204) Not codes F30
+
+## Define variables
+### Define CDE critera
+```{r}
+# Subset data to select variable 41202 and 41204
+dfcidi_cde <- raw180427 %>%
+  select(c(1, 96:910))
+
+# To list all the unique values in the data cols
+code_4120x = unique(as.vector(as.matrix(dfcidi_cde[,2:816])))
+
+# Make a list of code in CDE criteria that exist in the data
+cde_code = c("F10", "F11", "F12", "F13", "F14", "F15", "F16", "F17", "F18", "F19", "F20", "F21", "F22", "F23", "F24", "F25", "F28", "F29", "F30")
+
+cde_list=c()
+for (i in cde_code) {
+    cde_list = append(cde_list, (grep(i, code_4120x, fixed=F, value = T)))
+}
+
+# Check if there is any cde criteria code in each ID
+dfcidi_cde$not_meet_cde <- as.numeric(apply(dfcidi_cde[, 2:816], 1, function(x) any(x %in% cde_list)))
+
+# Check missing
+dfcidi_cde$miss <- as.numeric(apply(dfcidi_cde[, 2:816], 1, function(x) all(is.na(x))))
+
+dfcidi_cde$not_meet_cde[dfcidi_cde$not_meet_cde==0 & dfcidi_cde$miss==1] <- NA
+
+# Flip the code so meet_cde = 1 indicate ID that satisfied cde criteria
+dfcidi_cde <- dfcidi_cde %>%
+mutate(meet_cde = case_when(not_meet_cde== 1 ~ 0,
+                                not_meet_cde== 0 ~ 1)) 
+
+# Select variables
+dfcidi_cde <- dfcidi_cde %>%
+  select(c("eid","meet_cde"))
+```
+
+### Define B criteria
+- B criteria 20440 = 3
+
+```{r}
+# Get variable from rawcidi_ab
+dfcidi_b <- rawcidi_ab %>%
+  select(c("eid","f.20440.0.0"))
+
+dfcidi_b$meet_b <- ifelse((dfcidi_b$f.20440.0.0 ==3), 1, 0)
+
+dfcidi_b <- dfcidi_b %>%
+  select(c("eid","meet_b"))
+```
+### Prepare df for AB criteria for lifetime and current CIDI
+
+```{r}
+#Get variables 20442 and 20446 from df20441_20446_20433, merge with rawcidi_ab
+dfcidi_ab <- raw20441_20446_20433 %>%
+  select(c("eid", "f.20441.0.0", "f.20446.0.0")) %>%
+  merge(., rawcidi_ab, by="eid")
+
+# Rename columns
+criteria_list = c("A1_life20446", "A2_life20441", "A3_life20536", "A4_life20532", "A6_life20449", "A7_life20450", "A8_life20435", "A9_life20437", "A1_cur20510", "A2_cur20514", "A3_cur20511", "A4_cur20517", "A5_cur20518", "A6_cur20519", "A7_cur20507", "A8_cur20508", "A9_cur20513")
+
+var_list = c("20446", "20441", "20536", "20532", "20449", "20450", "20435", "20437", "20510", "20514", "20511", "20517", "20518", "20519", "20507", "20508", "20513")
+
+# Print criteria name and var name to check
+for (i in 1:length(criteria_list)) {
+  print(c(criteria_list[i], var_list[i]))
+}
+
+# Replace variable names with corresponding criteria name
+name_dfcidi_ab <- names(dfcidi_ab)
+for (i in 1:length(criteria_list)) {
+  names(dfcidi_ab)[names(dfcidi_ab) == grep(var_list[i], name_dfcidi_ab, fixed=F, value = T)] <- criteria_list[i]
+}
+
+dfcidi_a <- dfcidi_ab %>%
+  select(c("eid", all_of(criteria_list)))
+
+```
+
+### Define AB criteria for lifetime CIDI
+
+- 5/8 criteria A1-A9 with at least one criteria A1 or A2
+
+A1 (UKB 20446) = Yes
+A2 (UKB 20441) = Yes
+
+A3 (UKB 20536) = 1/2/3
+A4 (UKB 20532) = Yes
+A6 (UKB 20449) = Yes
+A7 (UKB 20450) = Yes
+A8 (UKB 20435) = Yes
+A9 (UKB 20437) = Yes
+
+```{r}
+# At least 1 A1 or A2
+dfcidi_a$meet_a12_life <- as.numeric(apply(dfcidi_a[, c("A1_life20446","A2_life20441")], 1, function(x) any(x ==1)))
+
+# At least 5 criteria A1-A9
+# Recode criteria A3
+dfcidi_a$a3_life <- ifelse((dfcidi_ab$A3_life20536==1| dfcidi_a$A3_life20536==2|dfcidi_ab$A3_life20536==3), 1, 0)
+
+# 5/8 criteria A1-A9
+dfcidi_a$sum_a1a9_life <- rowSums(dfcidi_a[,c("A1_life20446","A2_life20441","a3_life","A4_life20532","A6_life20449","A7_life20450", "A8_life20435", "A9_life20437")], na.rm = T)
+
+dfcidi_a$meet_a1a9_life <- ifelse((dfcidi_a$sum_a1a9 >= 5), 1, 0)
+
+dfcidi_a$a1a9_life_missing <- as.numeric(apply(dfcidi_a[,c("A1_life20446","A2_life20441","a3_life","A4_life20532","A6_life20449","A7_life20450", "A8_life20435", "A9_life20437")], 1, function(x) all(is.na(x))))
+
+# Recode meet_a1a9_life = NA if all questions A1-A9 are missing
+dfcidi_a$meet_a1a9_life[dfcidi_a$a1a9_life_missing==1 & dfcidi_a$meet_a1a9_life==0] <-NA
+
+dfcidi_a$meet_a_life <- ifelse((dfcidi_a$meet_a12_life==1 & dfcidi_a$meet_a1a9_life==1), 1,0)
+
+```
+
+### Define AB criteria for current CIDI
+- 5/9 criteria with at least one criteria A1 or A2
+
+A1 (UKB 20510) = 4
+A2 (UKB 20514) = 4
+
+A3 (UKB 20511) = 4
+A4 (UKB 20517) = 4
+A5 (UKB 20518) = 4
+A6 (UKB 20519) = 4
+A7 (UKB 20507) = 4
+A8 (UKB 20508) = 4
+A9 (UKB 20513) = 4
+
+```{r}
+# Recode variable for a1/a9
+dfcidi_a$a1_cur <- ifelse(dfcidi_a$A1_cur20510==4, 1, 0)
+dfcidi_a$a2_cur <- ifelse(dfcidi_a$A2_cur20514==4, 1, 0)
+dfcidi_a$a3_cur <- ifelse(dfcidi_a$A3_cur20511==4, 1, 0)
+dfcidi_a$a4_cur <- ifelse(dfcidi_a$A4_cur20517==4, 1, 0)
+dfcidi_a$a5_cur <- ifelse(dfcidi_a$A5_cur20518==4, 1, 0)
+dfcidi_a$a6_cur <- ifelse(dfcidi_a$A6_cur20519==4, 1, 0)
+dfcidi_a$a7_cur <- ifelse(dfcidi_a$A7_cur20507==4, 1, 0)
+dfcidi_a$a8_cur <- ifelse(dfcidi_a$A8_cur20508==4, 1, 0)
+dfcidi_a$a9_cur <- ifelse(dfcidi_a$A9_cur20513==4, 1, 0)
+
+# At least 1 A1 or A2 current
+dfcidi_a$meet_a12_cur <- as.numeric(apply(dfcidi_a[, c("a1_cur","a2_cur")], 1, function(x) any(x ==1)))
+
+# 5 or more A1-A9
+dfcidi_a$sum_a1a9_cur <- rowSums(dfcidi_a[, c("a1_cur","a2_cur","a3_cur","a4_cur",
+                                            "a5_cur","a6_cur","a7_cur","a8_cur","a9_cur")], na.rm = T) # Sum score A1-A9
+
+dfcidi_a$meet_a1a9_cur <- ifelse((dfcidi_a$sum_a1a9_cur >= 5), 1, 0)
+
+dfcidi_a$a1a9_cur_missing <- as.numeric(apply(dfcidi_a[, c("a1_cur","a2_cur","a3_cur","a4_cur",
+                                            "a5_cur","a6_cur","a7_cur","a8_cur","a9_cur")], 1, function(x) all(is.na(x))))
+
+dfcidi_a$meet_a1a9_cur[dfcidi_a$meet_a1a9_cur==0 & dfcidi_a$a1a9_cur_missing==1] <- NA
+
+dfcidi_a$meet_a_cur <- ifelse((dfcidi_a$meet_a12_cur==1 & dfcidi_a$meet_a1a9_cur==1), 1,0)
+
+# Subset data to get only criteria a
+dfcidi_all <- dfcidi_a %>%
+  select(c("eid","meet_a_life", "meet_a_cur")) %>%
+  merge(., dfcidi_b, by="eid") %>%
+  merge(., dfcidi_cde, by="eid")
+```
+
+### Define MDD cidi lifetime and current if meet 4 criteria
+```{r}
+dfcidi_all$cidi_lifetime <- ifelse((dfcidi_all$meet_a_life == 1 & dfcidi_all$meet_b ==1 & dfcidi_all$meet_cde==1 ), 1, 0)
+
+dfcidi_all$cidi_current <- ifelse((dfcidi_all$meet_a_cur == 1 & dfcidi_all$meet_b ==1 & dfcidi_all$meet_cde==1 ), 1, 0)
+
+dfcidi_all$cidi_mdd <- ifelse((dfcidi_all$cidi_lifetime == 1 | dfcidi_all$cidi_current == 1), 1, 0)
+```
+
+### Save data
+```{r}
+dfcidi <- dfcidi_all %>%
+  select(c("eid","cidi_lifetime", "cidi_current", "cidi_mdd"))
+
+save(dfcidi,file="<path>/cidi_case.Rda")
+```
+
+***************H***********************H********************H************************H*************
+
+# 2. ICD-coded MDD
+Primary or secondary diagnosis of a depressive mood disorder from linked hospital admission records
+Ref: https://www.nature.com/articles/s41588-020-0594-5/figures/1?proof=true
+
+## Criteria
+ICD code F32, F33, F34, F38, F39 for field 41202 (primary diagnosis) or 41204 (secondary diagnosis) 
+
+## Define variable
+```{r}
+index41202 = grep(41202, name_180427, value = F)
+index41204 = grep(41204, name_180427, value = F)
+
+dficd <- select(raw180427,c(1, all_of(index41202), all_of(index41204)))
+```
+
+Filter those who have ICD code F32, F33, F34, F38, F39 for field 41202 (primary diagnosis) or 41204 (secondary diagnosis) 
+```{r}
+# To list all the unique values in the data cols
+icd_ukb=unique(as.vector(as.matrix(dficd[,2:816])))
+
+# Just to have a look how the value look like
+#grep("F32", icd_ukb, fixed=F, value = T)
+# Make a list of code in the data file to include
+icd_mdd = c("F32", "F33", "F34", "F38", "F39")
+icd_list=c()
+for (i in icd_mdd) {
+    icd_list = append(icd_list, (grep(i, icd_ukb, fixed=F, value = T)))
+}
+# Check if there is any MDD code in each ID
+dficd$icd_mdd <- as.numeric(apply(dficd[, 2:816], 1, function(x) any(x %in% icd_list)))
+
+# Recode mdd3 into missing if all variables of ICD codes is missing
+dficd$miss <- as.numeric(apply(dficd[, 2:816], 1, function(x) all(is.na(x))))
+
+dficd$icd_mdd[dficd$miss==1] <- NA
+```
+
+# Save data dficd
+```{r}
+dficd<- dficd %>%
+  select(c(eid, icd_mdd))
+
+save(dficd,file="<path>/icd.Rda")
+```
+
+***************H***********************H********************H************************H*************
+
+# 3. Probable MD
+Presence and duration of low mood and anhedonia.
+Self-reported help-seeking behaviour for mental health difficulties. 
+Ref: https://www.nature.com/articles/s41588-020-0594-5/figures/1?proof=true
+
+Variable name in this study: mdd2
+
+## Criteria
+  1. “depressed/down for a whole week (UKB: 4598);
+Plus 
+at least 2 weeks duration (UKB: 4609);
+Plus 
+ever seen a GP or psychiatrist for nerves, anxiety or depression” (UKB 2090 or 2010)
+
+Or 
+
+  2. “ever anhedonia for a whole week (UKB 4631); 
+plus 
+at least 2 weeks duration (UKB 5375); 
+plus 
+ever seen a GP or psychiatrist for nerves, anxiety, or depression” (UKB: 2090 or 2010).
+
+Criteria 1 and 2 is based on derived variable UKB 20126 (code 3/4/5)
+ref: http://biobank.ctsu.ox.ac.uk/crystal/crystal/docs/MentalStatesDerivation.pdf
+
+## Define variable probable_md
+```{r}
+# Subset data
+dfprobable <- raw180427 %>%
+  select(c("eid", "f.20126.0.0"))
+
+colnames(dfprobable)= c("eid", "v20126")
+
+# compute variable
+dfprobable$probable_md <- ifelse((dfprobable$v20126==3 | dfprobable$v20126==4 | dfprobable$v20126==5), 1, 0)
+```
+
+## Save data dfprobable
+```{r}
+dfprobable <- dfprobable %>%
+  select(c("eid","probable_md" ))
+
+save(dfprobable,file="<path>/probable.Rda")
+```
+
+***************H***********************H********************H************************H*************
+
+# 4. Self-reported MD
+Based on Self-reported non-cancer diseases (UKB 20002)
+Ref: https://www.nature.com/articles/s41588-02true0-0594-5/figures/1?proof=
+and self-reported Mental health problems ever diagnosed by a professional	UKB 20544	Code 11 (Depression)
+
+## Criteria
+UKB 20002	= 1286
+or 
+UKB 20544 = 11 (Depression)
+
+## Define variable
+
+Criteria 1: UKB 20002	= 1286
+```{r}
+# Get data
+index20002 = grep(20002, names(raw180427), value = F)
+
+df20002 <- select(raw180427,c(1,all_of(index20002)))
+
+# To list all the unique values in the data cols
+disease=unique(as.vector(as.matrix(df20002[,2:88])))
+
+# Just to have a look how the value look like
+#grep("1286", disease, value = T)
+# Check if any of the field 20002* has code 1286
+df20002$code1286 <- as.numeric(apply(df20002[, 2:88], 1, function(x) any(x==1286)))
+
+df20002$non_miss <- as.numeric(apply(df20002[, 2:88], 1, function(x) any(!is.na(x))))
+
+# Recode code1286 into 0 if the person ever reported any disease (non-miss = 1)
+df20002$code1286[df20002$non_miss==1 & is.na(df20002$code1286) ] <- 0
+```
+
+Criteria 2: UKB 20544 = 11 (Depression)
+
+```{r}
+# Find the column index
+index20544 = grep(20544, names(rawdf2), value = F)
+
+# Subset data
+df20544 <- select(rawdf2,c(1,all_of(index20544)))
+
+# Screen for code 11 in all variables 20544
+df20544$code11 <- as.numeric(apply(df20544[, 2:17], 1, function(x) any(x==11)))
+
+# Recode missing into 0
+df20544$non_miss <- as.numeric(apply(df20544[, 2:17], 1, function(x) any(!is.na(x))))
+
+df20544$code11[df20544$non_miss==1 & is.na(df20544$code11)] <- 0
+```
+
+Merge 2 criteria
+```{r}
+dfself <- df20544 %>%
+  select(c("eid", "code11")) %>%
+  merge (., df20002, by="eid") %>%
+  select(c("eid","code1286", "code11"))
+
+dfself$self_rep_md <- ifelse((dfself$code1286==1 | dfself$code11==1), 1, 0)
+```
+
+## Save data dfself
+```{r}
+dfself <- dfself %>%
+  select(c("eid", "self_rep_md"))
+
+save(dfself,file="<path>/self_rep.Rda")
+```
+
+***************H***********************H********************H************************H*************
+
+# 5. MD cardinal symptoms
+
+Ever had prolonged loss of interest in normal activities (UKB 20441); or prolonged feelings of sadness or depression (UKB 20446)
+
+## Criteria 
+Either 20441 = 1 or 20446 = 1
+
+```{r}
+dfcardinal <- raw20441_20446_20433 %>%
+  select(c(1,3,4)) 
+colnames (dfcardinal) <- c("eid", "v20441", "v20446")
+
+dfcardinal$cardinal_md <- ifelse((dfcardinal$v20441==1 | dfcardinal$v20446==1),1,0)
+
+dfcardinal$non_miss <- as.numeric(apply(dfcardinal[, 2:3], 1, function(x) any(!is.na(x))))
+dfcardinal$cardinal_md[(is.na(dfcardinal$cardinal_md) & dfcardinal$non_miss==1)] <- 0
+```
+
+## Save data dfcardinal
+```{r}
+dfcardinal <- dfcardinal %>%
+  select(c("eid", "cardinal_md"))
+
+save(dfcardinal,file="<path>/cardinal.Rda")
+```
+
+***************H***********************H********************H************************H*************
+
+# 6. Help-seeking MD
+Self-reported help-seeking behaviour for mental health difficulties. 
+Ref: https://www.nature.com/articles/s41588-020-0594-5/figures/1?proof=true
+
+## Criteria mdd1: 
+    1. “Yes” to question “Have you ever seen a general practitioner (GP) for nerves, anxiety, tension or depression?" (UKB 2090)
+or
+    2. “Yes” to question “Have you ever seen a psychiatrist for nerves, anxiety, tension or depression?” (UKB 2010)
+
+## Derive variable
+```{r}
+# Get data
+index2090= grep("2090", name_180427, value = F)
+index2100= grep("2100", name_180427, value = F)
+dfseek_help <- select(raw180427,c(1, all_of(index2090), all_of(index2100)))
+
+# Index people with code 1 for any field
+dfseek_help$seek_help_md <- as.numeric(apply(dfseek_help[, 2:7], 1, function(x) any(x==1)))
+# Check if they have answered for any question then NA -> 0
+dfseek_help$non_miss <- as.numeric(apply(dfseek_help[, 2:7], 1, function(x) any(!is.na(x))))
+# Recode NA into 0 if there is any answer in any fields 2090 2100
+dfseek_help$seek_help_md[is.na(dfseek_help$seek_help_md) & dfseek_help$non_miss==1] <- 0
+```
+
+## Save data dfseek_help
+```{r}
+dfseek_help<- dfseek_help %>%
+    select(c(eid, seek_help_md))
+
+save(dfseek_help,file="<path>/seek_help.Rda")
+```
+
+***************H***********************H********************H************************H*************
+
+# 7. Medication used
+Self-reported Treatment/medication code (UKB field 20003)
+
+## Criteria 
+antidep: Using antidepressants
+antipsy_lithium: Used antipsychotics and/or lithium
+
+# Compute MDD variable medication use
+```{r}
+# List all code for each drug
+antidep = unique(as.vector(as.matrix(dfdrug[(dfdrug$class==1),1])))
+antipsy_lithi = unique(as.vector(as.matrix(dfdrug[(dfdrug$class==2|dfdrug$class==3),1])))
+
+# Index people who used each drug
+raw20003$antidep <- as.numeric(apply(raw20003[, 2:145], 1, function(x) any(x %in% antidep)))
+
+raw20003$antipsy_lithium <- as.numeric(apply(raw20003[, 2:145], 1, function(x) any(x %in% antipsy_lithi)))
+
+# Real missing = NA
+raw20003$miss <- as.numeric(apply(raw20003[, 2:145], 1, function(x) all(is.na(x))))
+
+raw20003$antidep[raw20003$miss==1 & raw20003$antidep==0] <- NA
+
+raw20003$antipsy_lithium[raw20003$miss==1 & raw20003$antipsy_lithium==0] <- NA
+```
+
+# Save data medication
+```{r}
+dfmedication <- raw20003 %>%
+  select(c("eid", "antidep", "antipsy_lithium"))
+
+save(dfmedication,file="<path>/medication.Rda")
+```
+
+***************H***********************H********************H************************H*************
+# Broad MD definition for study 0
+md15 includes those with at least one of the 5 definitions 1-5
+
+```{r}
+df_md <- dfcidi %>%
+  merge (., dficd, by="eid") %>%
+  merge (., dfprobable, by="eid") %>%
+  merge (., dfself, by="eid") %>%
+  merge (., dfcardinal, by ="eid") %>%
+  merge (., dfseek_help, by="eid") %>%
+  merge (., dfmedication, by="eid")
+
+df_md$md15 <- as.numeric(apply(df_md[,c("cidi_mdd","icd_mdd","probable_md","self_rep_md","cardinal_md"  )], 1, function(x) any(x ==1)))
+# Check if they have answered for any definition then NA -> 0
+df_md$non_miss15 <- as.numeric(apply(df_md[,c("cidi_mdd","icd_mdd","probable_md","self_rep_md","cardinal_md")], 1, function(x) any(!is.na(x))))
+
+df_md$md15[is.na(df_md$md15) & df_md$non_miss15==1] <- 0
+```
+## Save data df_md
+```{r}
+df_md <- df_md %>%
+  select(-non_miss15)
+
+save(df_md,file="Z:/<path>/df_md.Rda")
+```
+
+***************H***********************H********************H************************H*************
+***************H***********************H********************H************************H*************
+***************H***********************H********************H************************H*************
+This document contains code to extract MDD control population for UKB cohort 
+Metadata here
+http://biobank.ctsu.ox.ac.uk/crystal/
+
+# Description
+There are 3 controls group for MD cases, PPD cases and comorbid anxiety cases
+
+1. Control for MD cases
+- Not included in any of 7 MD definitions (CIDI-based MDD, ICD-coded MDD, Probable MD, Self-reported MD, MD cardinal symptoms, Help-seeking MD, Antidepressant use)
+
+2. Controls for PPD
+- Not included in any of 7 MD definitions
+- Women (UKB 31)
+- Have given >= 1 live birth
+
+3. Control for comorbid anxiety MD
+- Not included in any of 7 MD definitions
+- No anxiety diagnosis F40, F41 (UKB 41202, 41204)
+
+```{r}
+load("<path>/df_md.Rda") #df that was created in the previous section
+```
+
+# Preprocess data
+1. Not cases
+
+```{r}
+df_md$control_md <- ifelse((df_md$cidi_mdd==1 | df_md$icd_mdd==1 | df_md$probable_md==1 | df_md$self_rep_md==1 | df_md$cardinal_md== 1 | df_md$seek_help_md==1 | df_md$antidep==1), 0, 1)
+
+df_md$control_md[is.na(df_md$control_md)] <- 1
+df_md$control_md[df_md$control_md==0] <- NA
+```
+
+2. Indexing mothers
+```{r}
+# Indexing those without have given birth
+rawbirth$birth <- as.numeric(apply(rawbirth[, 2:4], 1, function(x) any(x>0)))
+rawbirth$birth[rawbirth$birth ==0] <- NA
+
+dfmother <- rawbirth %>%
+  select(c("eid","birth")) %>%
+  merge (., raw31, by="eid")
+
+dfmother$mother <- ifelse((dfmother$birth==1 & dfmother$sex==0), 1, 0)
+dfmother$mother[dfmother$mother==0] <-NA
+
+dfmother <- dfmother %>%
+  select(c("eid","mother"))
+
+table(dfmother$birth, dfmother$sex, useNA = "ifany")
+table(dfmother$mother, useNA = "ifany")
+
+```
+3. Anxiety
+
+```{r}
+# Index those with anxiety diagnosis
+index41202 = grep(41202, name_180427, value = F)
+index41204 = grep(41204, name_180427, value = F)
+
+dfanxiety <- select(raw180427,c(1, all_of(index41202), all_of(index41204)))
+
+code_4120x = unique(as.vector(as.matrix(dfanxiety[,2:816])))
+
+anx_code = c("F40", "F41")
+
+anx_list=c()
+for (i in anx_code) {
+    anx_list = append(anx_list, (grep(i, code_4120x, fixed=F, value = T)))
+}
+# Check if there is any anxiety code in each ID
+dfanxiety$anxiety <- as.numeric(apply(dfanxiety[, 2:816], 1, function(x) any(x %in% anx_list)))
+
+# Only exclude those with anxiety diagnosis from control for comorbid anxiety cases, missing are kept
+
+dfanxiety <- dfanxiety %>%
+  select(c(eid, anxiety))
+```
+
+# Merge data
+```{r}
+# Subset dataset for criteria 1
+dfcontrol <- df_md %>%
+  select(c("eid","control_md")) %>%
+  merge(., dfmother, by="eid") %>%
+  #merge(., dfanxiety, by="eid") %>%
+  merge(., raw31, by="eid")
+
+dfcontrol$control_ppd <- ifelse((dfcontrol$control_md==1 & dfcontrol$mother==1), 1, 0)
+dfcontrol$control_ppd[dfcontrol$control_ppd==0] <- NA
+
+# Anxiety = 0 are those without anxiety
+dfcontrol$control_anxiety <- ifelse((dfcontrol$control_md==1 & dfcontrol$anxiety!=1), 1, 0)
+dfcontrol$control_anxiety[dfcontrol$control_anxiety==0] <- NA
+```
+
+# Filter data criteria 2 and save data
+```{r}
+dfcontrol <- dfcontrol %>%
+  select(c("eid", "control_md","control_ppd", "control_anxiety"))
+
+save(dfcontrol,file="<path>/dfcontrol.Rda")
+```
+
