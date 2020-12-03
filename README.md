@@ -22,9 +22,8 @@ Input data are mentioned in the EXTRACT DATA UKB.
 
 ## DERIVE MD SUBTYPES
 ## PIPILINE FOR GWAS, ESTIMATING SNP-HERITABILITY AND GENETIC CORRELATION
-After deriving 
-
-
-
-```{bash}
-```
+After derivinng phenotypes, we constructed phenotype dataset for each subtype, and use this pipeline to conduct GWAS and estimating SNP-heritability, genetic correlations.
+Instruction on:
+- How to conduct GWAS using fastGWA including how to prepare phenotype data could be found here: https://cnsgenomics.com/software/gcta/#fastGWA
+- How to install LDSC and estimate SNP-heritability could be found here: https://github.com/bulik/ldsc
+- How to install HDL and estimate genetic correlation could be found here: https://github.com/zhenin/HDL
