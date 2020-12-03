@@ -1,0 +1,660 @@
+---
+title: "Subtype derivation"
+author: "Thi Thuy Dung Nguyen"
+date: '2020-11-01'
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+This document is a supplementary file for the manuscript:
+
+Thuy-Dung Nguyen, M.Sc.(1,2); Arvid Harder, B.Sc.1; Ying Xiong, M.Sc.(1); Kaarina Kowalec, Ph.D.(1,3); Sara Hägg, Ph.D.(1); Na Cai, Ph.D.(4), Ralf Kuja-Halkola, Ph.D.(1); Christina Dalman, M.D.(2); Patrick F Sullivan, M.D. FRANZCP(1,5); Yi Lu, Ph.D.(1,2)
+
+1.	Department of Medical Epidemiology and Biostatistics, Karolinska Institutet, Stockholm, Sweden
+2.	Department of Global Public Health, Karolinska Institute, Stockholm, Sweden
+3.	College of Pharmacy, University of Manitoba, Winnipeg, Canada
+4.	Helmholtz Pioneer Campus, Helmholtz Zentrum München, Neuherberg, Germany
+5.	Department of Genetics and Psychiatry, University of North Carolina, Chapel Hill, NC, USA
+
+Corresponding author: 
+Yi Lu, Ph.D.
+Nobels Väg 12A, 
+Solna, Sweden 17177  
+lu.yi@ki.se 
+Responsible for this code file
+Thuy-Dung Nguyen
+Nobels Väg 12A, 
+Solna, Sweden 17177  
+thuy.dung.nguyen@ki.se
+
+This file contains code to derive MD subtypee. Raw data was extracted from UKB phenotype data, the numbers appeared in field names are corresponding to the UKB field ID. Details information and meta-data of UKB can be found here: http://biobank.ctsu.ox.ac.uk/crystal/
+
+The small datasets (.tab file) mentioned below were extracted from 2 original data files named ukb21472.tab (date 180427) and ukb22140.tab (date 180524). To know which variables are stored in each .tab file, see the extraction code in UKB_variable_extraction.Rmd.
+
+# Loading packages
+```{r, include=FALSE}
+library(data.table)
+library(tidyverse)
+```
+# Loading data
+```{r}
+path180427 <- "<path>/ukb180427_21472_p0.tab"
+raw180427<- fread(path180427, header = TRUE)
+name_180427 = names(raw180427)
+names(raw180427)[1] = "eid"
+raw180427[,2:7][raw180427[,2:7] == -3 |raw180427[,2:7] == -1] <- NA # 2090 & 2100
+
+path20433 <- "<path>/ukb180524_20441_20446_20433.tab"
+raw20433 <- fread(path20433, header = TRUE)
+names(raw20433)[1] = "eid"
+raw20433[,2:4][raw20433[,2:4] == -121 |raw20433[,2:4] == -818] <- NA
+
+path20534 <- "<path>/ukb180524_20534.tab"
+raw20534 <- fread(path20534, header=T)
+names(raw20534)[1] = "eid"
+
+pathcidi  <- "<path>/ukb180524_CIDI_criteria.tab"
+rawcidi_ab <- fread(pathcidi, header = T)
+names(rawcidi_ab)[1] = "eid"
+rawcidi_ab[,2:18][rawcidi_ab[,2:18] == -121 |rawcidi_ab[,2:18] == -818] <- NA
+
+path20126 <- "<path>/ukb180427_20126.tab"
+raw20126 <- fread(path20126, header = T)
+names(raw20126) = c("eid", "v20126")
+
+path20445_20544 = "<path>/ukb180524_20445_20544.tab"
+raw20544<- fread(path20445_20544, header = TRUE, drop="f.20445.0.0")
+names(raw20544)[1] = "eid"
+raw20544[,2:17][raw20544[,2:17] == -819 |raw20544[,2:17] == -818] <- NA
+
+raw20445<- fread(path20445_20544, header = TRUE) %>%
+  select(c(f.eid, f.20445.0.0))
+names(raw20445)[1] = "eid"
+raw20445[,2][raw20445[,2] == -818 |raw20445[,2] == -313|raw20445[,2] == -121] <- NA
+
+path20437_20447 <- "<path>/ukb180524_20437_20447.tab"
+raw20437_20447 <- fread(path20437_20447, header = TRUE)
+names(raw20437_20447) = c("eid", "v20437", "v20447")
+raw20437_20447[,2:3][raw20437_20447[,2:3] == -121 |raw20437_20447[,2:3] == -818] <- NA
+
+path31 <- "<path>/ukb180427_31.csv"
+rawsex <- fread(path31, header = T)
+colnames(rawsex) = c("eid", "sex")
+
+# Case-Controls: final_pop
+load("<path>/case_control_201029.Rda")
+```
+# Derive subtypes
+
+## 1. Atypical symptoms
+```{r}
+dfatypical <- rawcidi_ab %>% 
+  select(c("eid", "f.20536.0.0")) %>%
+  merge (., raw20534, by="eid") %>%
+  merge (., final_pop, by="eid") %>%
+  select(c("fid", "eid", "cidi_mdd", "md15", "f.20536.0.0", "f.20534.0.0", "control_md"))
+```
+
+Computing var symptoms = 1 if (20536 = 1 & 20534 = 1)
+= NA if (20536 = NA | 20534 = NA)
+= 0 otherwise
+
+```{r}
+dfatypical$symptom <- ifelse((dfatypical$f.20536.0.0==1 & dfatypical$f.20534.0.0 ==1), 1,0)
+dfatypical$symptom[is.na(dfatypical$symptom)] <- 0
+dfatypical$symptom[dfatypical$symptom==0 & (is.na(dfatypical$f.20536.0.0)|is.na(dfatypical$f.20534.0.0))] <- NA
+```
+
+### a. Atypical_cardinal
+atypical = 2 if (md15 =1 & symptom = 1 (weight gain and Hypersomnia))
+= 1 if (md15 =0 & symptom = 0 (weight gain and Hypersomnia))
+= NA otherwise (any of those 3 criteria = NA)
+= 0 if control
+
+```{r}
+dfatypical$atypical <- ifelse(dfatypical$md15==1 & dfatypical$symptom==1, 2, NA)
+dfatypical$atypical[is.na(dfatypical$atypical) & dfatypical$md15==1 & dfatypical$symptom==0] <-1
+
+# Control =0
+dfatypical$atypical[is.na(dfatypical$atypical) & dfatypical$control_md==1] <- 0
+
+```
+
+### b. Atypical CIDI
+Same as atypical but replace md15 = cidi_mdd
+
+```{r}
+dfatypical$atypical_cidi <- ifelse(dfatypical$cidi_mdd==1 & dfatypical$symptom==1, 2, NA)
+
+dfatypical$atypical_cidi[is.na(dfatypical$atypical_cidi) & dfatypical$cidi_mdd==1 & dfatypical$symptom==0] <-1
+
+# Control =0
+dfatypical$atypical_cidi[is.na(dfatypical$atypical_cidi) & dfatypical$control_md==1] <- 0
+```
+
+### Select variables
+
+```{r}
+dfatypical <- dfatypical %>%
+  select(c("fid","eid", "atypical", "atypical_cidi"))
+```
+
+***************HHHHHH****************
+
+## 2. Severity
+Severity among cases defined in probable MD and ICD codes
+
+Severity = 1, mild/moderate:
+
+20126=4
+or
+41202 = F320/F321(single mild/moderate) / F330/F331 (recurrent mild/moderate)
+or
+41204 = F320/F321(single mild/moderate) / F330/F331 (recurrent mild/moderate)
+
+Severity = 2, severe:
+
+20126=3
+or
+41202 = F322, F323 (single severe)/ F332, F333 (recurrent severe)
+or
+41204 = F322, F323 (single severe)/ F332, F333 (recurrent severe)
+
+
+### Compute severity based on 20126
+severe20126 = 1 if v20126 3
+severe20126 = 0 if v20126 4
+
+```{r}
+dfsevere20126 <- raw20126
+
+dfsevere20126$v20126[dfsevere20126$v20126==5 | dfsevere20126$v20126 <3 ] <- NA
+
+dfsevere20126$v20126[dfsevere20126$v20126==4 ] <- 0 # Moderate
+dfsevere20126$v20126[dfsevere20126$v20126==3 ] <- 1 # Severe
+
+names(dfsevere20126) = c("eid","severe20126")
+```
+### Compute severity based on ICD codes
+icdsevere
+= 1 if any ICD code in severe_list = c("F322","F323", "F332", "F333")
+= 0 if any ICD no code in severe_list but not all missing
+= NA if icdmiss = 1 (missing all ICD fields)
+
+```{r}
+index41202 = grep(41202, names(raw180427), value = F)
+index41204 = grep(41204, names(raw180427), value = F)
+
+df4120x <- select(raw180427,c(1, all_of(index41202), all_of(index41204)))
+```
+
+Filter those who have ICD code for field 41202 (primary diagnosis) or 41204 (secondary diagnosis) 
+
+```{r}
+# To list all the unique values in the data cols
+icd_ukb=unique(as.vector(as.matrix(df4120x[,2:816])))
+
+# To see the list code in UKB
+#f33_list <- grep("F33", icd_ukb, fixed=F, value = T)
+#mild_list = c("F320","F321","F330", "F331")
+severe_list = c("F322","F323", "F332", "F333")
+
+df4120x$icdmiss <- as.numeric(apply(df4120x[, 2:816], 1, function(x) all(is.na(x))))
+
+df4120x$icdsevere <- as.numeric(apply(df4120x[, 2:816], 1, function(x) any(x %in% severe_list)))
+# The rest of ICD cases are considered mild moderate
+df4120x$icdsevere[df4120x$icdsevere==0 & df4120x$icdmiss ==1] <- NA
+```
+
+### Combine the 2 severity conditions
+```{r}
+dfseverity <- df4120x %>%
+  merge (., dfsevere20126, by="eid") %>%
+  merge (., final_pop, by="eid") %>%
+  select (c("fid", "eid","severe20126", "icdsevere", "md15", "cidi_mdd", "control_md"))
+```
+
+severe_ind = 1 if (severe20126 = 1 | icdesevere = 1)
+= 0 if (severe20126 = 0 & icdesevere = 0)
+= NA if (severe20126 = NA | icdesevere = NA)
+
+```{r}
+dfseverity$severe_ind <- ifelse((dfseverity$severe20126==1 | dfseverity$icdsevere ==1), 1, NA)
+  
+dfseverity$severe_ind[is.na(dfseverity$severe_ind) & dfseverity$severe20126==0 &dfseverity$icdsevere ==0] <- 0
+```
+
+severity = 2 if (severe_ind =1 & md15 = 1)
+= 1 if (severe_ind =0 & md15 = 1)
+= 0 if control
+= NA if (severe_ind =NA | md15 = NA)
+```{r}
+dfseverity$severity <- ifelse((dfseverity$md15==1 & dfseverity$severe_ind ==1), 2, NA)
+
+dfseverity$severity[is.na(dfseverity$severity) & dfseverity$md15==1 & dfseverity$severe_ind ==0] <- 1
+
+dfseverity$severity[is.na(dfseverity$severity) & dfseverity$control_md==1] <- 0
+```
+severity_cidi = 2 if (severe_ind =1 & cidi_mdd = 1)
+= 1 if (severe_ind =0 & cidi_mdd = 1)
+= 0 if control
+= NA if (severe_ind =NA | md15 = NA)
+
+```{r}
+dfseverity$severity_cidi <- ifelse((dfseverity$cidi_mdd==1 & dfseverity$severe_ind ==1), 2, NA)
+
+dfseverity$severity_cidi[is.na(dfseverity$severity_cidi) & dfseverity$cidi_mdd==1 & dfseverity$severe_ind ==0] <- 1
+
+dfseverity$severity_cidi[is.na(dfseverity$severity_cidi) & dfseverity$control_md==1] <- 0
+```
+### Select variables
+```{r}
+dfseverity <- dfseverity %>%
+  select(c("fid","eid","severity", "severity_cidi"))
+```
+
+***************HHHHHH****************
+## 3. Comorbid anxiety
+MD with comobid anxiety, panic attacks, social anxiety/phobia	
+20544 = 1/6/15
+or 
+41202/41204 = F40, F41 (Phobic anxiety disorder/other anxiety disorder))
+Non-comorbid anxiety	
+20544 != 1/6/15
+and 41202/41204 != F40, F41)
+
+### Filter those with anxiety
+Filter those with anxiety in 20544
+
+```{r}
+all20544_list =unique(as.vector(as.matrix(raw20544[,2:17])))
+axn_list <- c(1,6,15)
+
+raw20544$anx20544 <- as.numeric(apply(raw20544[, 2:17], 1, function(x) any(x %in% axn_list)))
+
+raw20544$miss <- as.numeric(apply(raw20544[, 2:17], 1, function(x) all(is.na(x))))
+
+raw20544$anx20544[raw20544$miss==1& raw20544$anx20544==0] <- NA
+
+```
+Anxiety in icd
+```{r}
+index41202 = grep(41202, names(raw180427), value = F)
+index41204 = grep(41204, names(raw180427), value = F)
+
+df4120x <- select(raw180427,c(1, all_of(index41202), all_of(index41204)))
+```
+
+
+Filter those who have ICD code F40, F41 for field 41202 (primary diagnosis) or 41204 (secondary diagnosis) 
+```{r}
+# To list all the unique values in the data cols
+#icd_ukb=unique(as.vector(as.matrix(df4120x[,2:816])))
+
+anxiety_list = c("F401","F400","F402","F408","F409","F410","F419","F412","F411","F418","F413")
+
+df4120x$icdanxiety <- as.numeric(apply(df4120x[, 2:816], 1, function(x) any(x %in% anxiety_list)))
+
+# Check missing in all ICD fields and code = NA, use later when applying cases condition
+df4120x$miss <- as.numeric(apply(df4120x[, 2:816], 1, function(x) all(is.na(x))))
+
+df4120x$icdanxiety[df4120x$miss==1] <- NA
+
+```
+
+Computing co_anxiety
+= 1 if anx20544 =1 | icdanxiety = 1
+= 0 if anx20544 =0 and icdanxiety = 0
+
+```{r}
+dfanxiety <- df4120x %>%
+  select(c("eid", "icdanxiety")) %>%
+  merge(., raw20544, by="eid") %>%
+  merge(., final_pop, by="eid") %>%
+  select(c("fid", "eid","anx20544","icdanxiety", "md15", "cidi_mdd","control_anxiety"))
+
+dfanxiety$co_anxiety <- ifelse((dfanxiety$anx20544==1 | dfanxiety$icdanxiety==1), 1, NA)
+
+dfanxiety$co_anxiety[is.na(dfanxiety$co_anxiety)& (dfanxiety$anx20544==0 & dfanxiety$icdanxiety==0)] <- 0
+```
+
+Compute co.anxiety MD
+```{r}
+# compute anxiety =2 if md15 == 1 and co_anxiety ==1
+dfanxiety$anxiety <- ifelse((dfanxiety$md15==1 & dfanxiety$co_anxiety==1), 2, NA)
+
+dfanxiety$anxiety[is.na(dfanxiety$anxiety) & dfanxiety$md15==1 & dfanxiety$co_anxiety==0] <- 1
+
+dfanxiety$anxiety[is.na(dfanxiety$anxiety) & dfanxiety$control_anxiety ==1] <- 0
+
+# compute anxiety_cidi = 2 if cidi_mdd = 1 and co_anxiety = 1
+
+dfanxiety$anxiety_cidi <- ifelse((dfanxiety$cidi_mdd==1 & dfanxiety$co_anxiety==1), 2, NA)
+
+dfanxiety$anxiety_cidi[is.na(dfanxiety$anxiety_cidi) & dfanxiety$cidi_mdd==1 & dfanxiety$co_anxiety==0] <- 1
+
+dfanxiety$anxiety_cidi[is.na(dfanxiety$anxiety_cidi) & dfanxiety$control_anxiety ==1] <- 0
+```
+
+### Select variables
+
+```{r}
+dfanxiety <- dfanxiety %>%
+  select(c("fid", "eid", "anxiety", "anxiety_cidi"))
+```
+
+***************HHHHHH****************
+## 4. Age at onset
+```{r}
+dfaoo <- raw20433 %>%
+  merge(., final_pop, by="eid") %>%
+  select(c("fid", "eid", "f.20433.0.0", "control_md", "md15", "cidi_mdd")) 
+names(dfaoo)[3] <- "v20433"
+
+octile = quantile(dfaoo$v20433, probs = seq(0,1,0.125), na.rm = T, names = F)
+
+dfaoo$aoo= as.character(cut(dfaoo$v20433,octile,right=TRUE, include.lowest=TRUE))
+
+dfaoo$aoo[(dfaoo$aoo=="[2,19]"| dfaoo$aoo== "(19,25]"|dfaoo$aoo== "(25,30]")] <- 1
+dfaoo$aoo[(dfaoo$aoo=="(30,37]"| dfaoo$aoo== "(37,43]")] <- NA
+dfaoo$aoo[(dfaoo$aoo=="(43,49]"| dfaoo$aoo== "(49,55]"|dfaoo$aoo== "(55,78]")] <- 2
+
+dfaoo$aoo[is.na(dfaoo$aoo) & dfaoo$md15==0] <- 0
+
+dfaoo$aoo_cidi <- dfaoo$aoo
+dfaoo$aoo_cidi[(dfaoo$aoo_cidi==1 | dfaoo$aoo_cidi==2) & is.na(dfaoo$cidi_mdd)] <- NA
+```
+
+### Select variables
+```{r}
+dfaoo <- dfaoo %>%
+  select(c("fid", "eid","aoo", "aoo_cidi")) 
+```
+
+***************HHHHHH****************
+
+## 5. Recurrence
+Single episode MDD or CIDI-based single episode	
+
+Single:
+20126   = 5 
+or 
+mdd8_cidi = 1 & 20442 < 2
+or 
+ICD = F32 (no F33)
+
+Recurrent 
+20126   = 3/4 
+or 
+mdd8_cidi = 1 & 20442 >= 2
+or 
+ICD = F33
+
+### Compute recur_ind
+recur_ind
+= 1 if 
+20126   = 3/4 
+or 
+mdd8_cidi = 1 & 20442 >= 2
+or 
+ICD = F33
+
+=0 if 
+20126   = 5 
+or 
+mdd8_cidi = 1 & 20442 < 2
+or 
+ICD = F32 (no F33)
+
+```{r}
+# Filter ICD codes
+index41202 = grep(41202, names(raw180427), value = F)
+index41204 = grep(41204, names(raw180427), value = F)
+
+df4120x <- select(raw180427,c(1, all_of(index41202), all_of(index41204)))
+# To list all the unique values in the data cols
+icd_ukb=unique(as.vector(as.matrix(df4120x[,2:816])))
+
+# List of F33 codes in ukb
+#f32_list <- grep("F32", icd_ukb, fixed=F, value = T)
+sing_list = c("F329", "F323", "F322", "F321", "F320", "F328", "F32")
+recur_list = c("F331", "F333", "F332", "F339", "F334", "F330", "F338")
+
+# icd_recur = 1 if in recur_list
+df4120x$icd_recur <- as.numeric(apply(df4120x[, 2:816], 1, function(x) any(x %in% recur_list)))
+
+df4120x$icd_single <- as.numeric(apply(df4120x[, 2:816], 1, function(x) any(x %in% sing_list)))
+
+# if in recur list then single is 0
+df4120x$icd_single[df4120x$icd_single==1 & df4120x$icd_recur==1] <- 0
+
+# Function any() indicate 1 if there condition = T and 0 if not. So recode recur at 0 to NA if single = 0
+df4120x$icd_recur[df4120x$icd_single==0 & df4120x$icd_recur==0] <- NA
+
+# Combine with other dataset
+dfrecurrence <- df4120x %>%
+  select(c("eid", "icd_recur")) %>%
+  merge(., rawcidi_ab, by="eid") %>%
+  merge(., raw20126, by="eid") %>%
+  merge(., final_pop, by="eid") %>%
+  select(c("fid", "eid", "icd_recur", "v20126", "f.20442.0.0", "cidi_mdd", "md15", "control_md"))
+```
+
+Compute cidi recurrent
+```{R}
+# Recode -999 to 1000 as the case has too many episode to count
+dfrecurrence$f.20442.0.0[dfrecurrence$f.20442.0.0 == -999] <- 1000
+
+dfrecurrence$multi_eps <- ifelse((dfrecurrence$f.20442.0.0 >= 2), 1, 0)
+
+# Compute recurrent cidi-based MDD 
+dfrecurrence$cidi_recur <- ifelse((dfrecurrence$cidi_mdd == 1 & dfrecurrence$multi_eps ==1), 1, NA)
+dfrecurrence$cidi_recur[is.na(dfrecurrence$cidi_recur) & dfrecurrence$cidi_mdd == 1 & dfrecurrence$multi_eps ==0] <- 0
+```
+
+Compute 20126 recurrent
+```{R}
+# Recode recur20126 = 1 if v20125 = 3/4
+# recur20126 = 0 if v20125 = 5
+# Otherwise NA
+dfrecurrence$recur20126 <- NA
+dfrecurrence$recur20126[dfrecurrence$v20126 ==3 | dfrecurrence$v20126 == 4] <- 1
+dfrecurrence$recur20126[dfrecurrence$v20126 ==5] <- 0
+```
+
+Compute recur_ind
+=1 if icd_recur =1 | cidi_recur=1 | recur20126=1
+=0 if icd_recur =0 | cidi_recur=0 | recur20126=0 but not = 1
+
+```{r}
+dfrecurrence$recur_ind <- ifelse((dfrecurrence$icd_recur==1 |dfrecurrence$cidi_recur==1 | dfrecurrence$recur20126==1), 1, NA)
+
+dfrecurrence$recur_ind[is.na(dfrecurrence$recur_ind) & (dfrecurrence$icd_recur==0 |dfrecurrence$cidi_recur==0 | dfrecurrence$recur20126==0)] <- 0
+```
+
+Compute recurrence
+=1 if recur_ind=1 & md15= 1
+=0 if recur_ind=0 & md15= 1
+
+```{r}
+# md15
+dfrecurrence$recurrence <- ifelse((dfrecurrence$md15==1 & dfrecurrence$recur_ind==1), 2, NA)
+dfrecurrence$recurrence[is.na(dfrecurrence$recurrence) & dfrecurrence$md15==1 & dfrecurrence$recur_ind==0] <- 1
+dfrecurrence$recurrence[is.na(dfrecurrence$recurrence) & dfrecurrence$control_md==1] <- 0
+
+# Recurrence cidi
+dfrecurrence$recurrence_cidi <- ifelse((dfrecurrence$cidi_mdd==1 & dfrecurrence$recur_ind==1), 2, NA)
+dfrecurrence$recurrence_cidi[is.na(dfrecurrence$recurrence_cidi) & dfrecurrence$cidi_mdd==1 & dfrecurrence$recur_ind==0] <- 1
+dfrecurrence$recurrence_cidi[is.na(dfrecurrence$recurrence_cidi) & dfrecurrence$control_md==1] <- 0
+```
+
+### Select variables
+```{r}
+dfrecurrence <- dfrecurrence %>%
+  select(c("fid", "eid","recurrence", "recurrence_cidi"))
+```
+
+***************HHHHHH****************
+##. 6. Suicide
+Having suicidal thought during the worst period of MDD indication or recent thoughts of suicide or self-harm.
+
+Yes (2):
+20437 = 1
+or
+20513 = 3/4
+
+No:
+20437 = 0
+or
+20513 = 1
+
+```{r}
+dfsuicide <- raw20437_20447 %>%
+  merge (., rawcidi_ab, by= "eid") %>%
+  select (c("eid", "v20437","f.20513.0.0")) %>%
+  merge(., final_pop, by="eid")
+
+# Recode 20513
+dfsuicide$f.20513.0.0[dfsuicide$f.20513.0.0==1] <- 0
+dfsuicide$f.20513.0.0[dfsuicide$f.20513.0.0==3| dfsuicide$f.20513.0.0==4] <- 1
+dfsuicide$f.20513.0.0[dfsuicide$f.20513.0.0==2] <- NA
+
+dfsuicide$suicide_ind <- ifelse((dfsuicide$v20437==1 | dfsuicide$f.20513.0.0==1), 1, NA)
+dfsuicide$suicide_ind[is.na(dfsuicide$suicide_ind) & dfsuicide$v20437==0 & dfsuicide$f.20513.0.0==0] <- 0
+
+# md15 with suicide
+dfsuicide$suicide <- ifelse((dfsuicide$suicide_ind ==1 & dfsuicide$md15==1), 2, NA)
+
+dfsuicide$suicide[is.na(dfsuicide$suicide) & (dfsuicide$md15==1& dfsuicide$suicide_ind==0)] <- 1
+
+dfsuicide$suicide[is.na(dfsuicide$suicide) & (dfsuicide$control_md==1)] <- 0
+
+# cidi mdd with suicide
+dfsuicide$suicide_cidi <- ifelse((dfsuicide$suicide_ind ==1 & dfsuicide$cidi_mdd==1), 2, NA)
+
+dfsuicide$suicide_cidi[is.na(dfsuicide$suicide_cidi) & (dfsuicide$cidi_mdd==1& dfsuicide$suicide_ind==0)] <- 1
+
+dfsuicide$suicide_cidi[is.na(dfsuicide$suicide_cidi) & (dfsuicide$control_md==1)] <- 0
+```
+
+### Select variables
+```{r}
+dfsuicide <- dfsuicide %>%
+  select(c("fid", "eid", "suicide", "suicide_cidi"))
+```
+
+***************HHHHHH****************
+##. 7 Impairment
+Impact on normal roles during worst period of depression (ukb 20440)
+20440
+Mild (1):
+20440 = 0 (not at all) / 1 (A little) 
+
+moderate (2):
+20440 = 2 (somewhat)
+
+severe (3):
+20440 = 3 (A lot)
+```{r}
+dfimpair <- rawcidi_ab %>%
+  select(c("eid","f.20440.0.0")) %>%
+  merge(., final_pop, by="eid")
+names(dfimpair)[2] <- "impair"
+
+# only case of MD15 were included in impair 123
+dfimpair$impair[dfimpair$impair == 0] <- 1
+dfimpair$impair[is.na(dfimpair$impair)& dfimpair$control_md] <- 0
+
+# Note: Cannot derive impairment within cidi because 20440=3 is a criteria for cidi MDD
+```
+
+### Select variables
+```{r}
+dfimpair <- dfimpair %>%
+  select(c("fid", "eid", "impair"))
+```
+
+***************HHHHHH****************
+## 8. Postpartum
+WOMEN who:
+  1. Self reported post-natal depression UBK field 20002 code 1531
+or  
+  2. Diagnosed Mental and behavioural disorders associated with the puerperium, code F53 for UKB fields 41202 or 41202	
+or
+  3. Self-reported Depression possibly related to childbirth code 1 for UKB field 20445
+
+
+### Compute variable based on criteria 1 20002 code 1531
+Subset data criteria 1
+```{r}
+index20002 = grep(20002, names(raw180427), value = F)
+df20002 <- select(raw180427,c(1,all_of(index20002)))
+```
+
+```{r}
+# To list all the unique values in the data cols
+disease=unique(as.vector(as.matrix(df20002[,2:88])))
+
+# Check if any of the field 20002* has code 1531
+df20002$code1531 <- as.numeric(apply(df20002[, 2:88], 1, function(x) any(x==1531)))
+
+# Select columns
+df20002_1531<- df20002 %>%
+    select(c(eid, code1531))
+```
+
+# Subset data criteria 2 ICD = F53
+```{r}
+# Find the column index
+index41202 = grep(41202, names(raw180427), value = F)
+index41204 = grep(41204, names(raw180427), value = F)
+# Subset data
+df4120x <- select(raw180427,c(1,all_of(index41202),all_of(index41204)))
+```
+
+# Compute variable based on criteria 2,3 ICD = F53 and 20445 =1
+```{r}
+# To list all the unique values in the data cols
+code_4120x = unique(as.vector(as.matrix(df4120x[,2:816])))
+
+# Make a list of code F53 that exist in the data
+f53_list = grep("F53", code_4120x, fixed=F, value = T)
+
+# Check if there is any F53 code in each ID
+df4120x$f53 <- as.numeric(apply(df4120x[, 2:816], 1, function(x) any(x %in% f53_list)))
+
+df4120x$f53[df4120x$f53==0] <- NA
+
+# Select column
+dfppd<- df4120x %>%
+  select(c(eid, f53)) %>%
+  merge(., df20002_1531, by="eid") %>%
+  merge(., raw20445, by="eid") %>%
+  merge(., final_pop,by="eid") %>%
+  merge(., rawsex, by="eid") %>%
+  select(c(fid, eid, code1531, f53, f.20445.0.0, md15, cidi_mdd, control_ppd, sex))
+```
+
+### Combine 3 criteria
+```{r}
+dfppd$ppd_ind <- as.numeric(apply(dfppd[,3:5], 1, function(x) any(x==1)))
+
+dfppd$ppd_ind[dfppd$ppd_ind==1 & dfppd$sex ==1] <- NA
+
+# ppd within md15
+dfppd$ppd<- ifelse((dfppd$md15==1 & dfppd$ppd_ind==1), 1, NA)
+dfppd$ppd[is.na(dfppd$ppd) & dfppd$control_ppd ==1] <- 0
+
+# ppd within cidi MDD
+dfppd$ppd_cidi<- ifelse((dfppd$cidi_mdd==1 & dfppd$ppd_ind==1), 1, NA)
+dfppd$ppd_cidi[is.na(dfppd$ppd_cidi) & dfppd$control_ppd ==1] <- 0
+```
+ 
+### Select variables
+
+```{r}
+dfppd <- dfppd %>%
+  select(c(fid, eid, ppd, ppd_cidi))
+```
+
+

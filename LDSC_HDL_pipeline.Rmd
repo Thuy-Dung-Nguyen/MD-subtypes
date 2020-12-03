@@ -6,7 +6,7 @@ output: html_document
 editor_options: 
   chunk_output_type: console
 ---
-This document is a supplementary file for article:
+This document is a supplementary file for manuscript:
 
 Genetic heterogeneity and subtypes of major depression
 

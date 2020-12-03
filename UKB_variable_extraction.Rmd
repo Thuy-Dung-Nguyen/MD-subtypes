@@ -32,16 +32,16 @@ thuy.dung.nguyen@ki.se
 Metadata about all variables can be found here
 http://biobank.ctsu.ox.ac.uk/crystal/
 
-The UKB phenotype data is stored in 2 mother files named ukb21472.tab (date 180427) and ukb22140.tab (date 180524) in a server. 
+The UKB phenotype data is stored in 2 original data files named ukb21472.tab (date 180427) and ukb22140.tab (date 180524). 
 
 # Code template to extract variables
 ```{bash}
 # Build a list for field names
-var_list=(eid <put variables here>) # this var_list is changed corresponding to each child dataset extracted
+var_list=(eid <put variables here>) # this var_list is changed corresponding to each small dataset extracted
 index_array=()
 for i in ${var_list[*]}
     do
-        index_array+=($(head -1 /<path>/mother_file_name.tab |tr -s "\t" "\n" | cat -n |grep -n $i |cut -d: -f1))
+        index_array+=($(head -1 /<path>/original_dataset.tab |tr -s "\t" "\n" | cat -n |grep -n $i |cut -d: -f1))
     done
 
 # Buil a string from the index_array
@@ -56,13 +56,13 @@ index_str=${index_str::-1}
 echo "${index_str[*]}"
 
 # Extract column using indexes (the cut option -f takes only string as argument)
-cut -f $index_str /<path>/mother_file1.tab > /<path>/child_file_name.tab
+cut -f $index_str /<path>/original_dataset.tab > /<path>/small_file_name.tab
 ```
 
 # Variable list for child dataset
-Below, we listed the mother file name and the child file name together with variable list. Child dataset were mentioned in our code to derive variable, Derive_MD_case_control.Rmd and Derive_subtype.Rmd
+Below, we listed the original file name and the small dataset name together with variable list. Small dataset were mentioned in our code to derive variable, Derive_MD_case_control.Rmd and Derive_subtype.Rmd
 
-## 1. Mother dataset ukb21472.tab (date 180427) 
+## 1. Original dataset ukb21472.tab (date 180427) 
 ukb180427_21472_p0.tab
 var_list=(eid f.2090\. f.2100\. f.20126\. f.20002\. f.41202\. f.41204\.)
 
@@ -75,7 +75,10 @@ var_list=(eid f.31\.)
 ukb180427_2734.tab
 var_list=(eid f.2734\.)
 
-## 2. Mother dataset ukb22140.tab (date 180524)
+ukb180427_20126.tab
+var_list=(eid f.20126\.)
+
+## 2. Original dataset ukb22140.tab (date 180524)
 ukb180524_20445_20544.tab
 var_list=(eid f.20445\. f.20544\.)
 
@@ -84,3 +87,12 @@ var_list=(eid f.20441\. f.20446\. f.20433\.)
 
 ukb180524_CIDI_criteria.tab
 var_list=(eid f.20536\. f.20532\. f.20449\. f.20450\. f.20435\. f.20437\. f.20440\. f.20510\. f.20514\. f.20511\. f.20517\. f.20518\. f.20519\. f.20507\. f.20508\. f.20513\. f.20442\.)
+
+ukb180524_20437_20447.tab
+var_list=(eid f.20437\. f.20447\.)
+
+ukb180524_20534.tab
+var_list=(eid f.20534\.)
+
+
+

@@ -4,16 +4,15 @@ output: html_document
 editor_options: 
   chunk_output_type: console
 ---
-This document is a supplementary file for article:
+This document is a supplementary file for the manuscript:
 
-Genetic heterogeneity and subtypes of major depression
+Thuy-Dung Nguyen, M.Sc.(1,2); Arvid Harder, B.Sc.1; Ying Xiong, M.Sc.(1); Kaarina Kowalec, Ph.D.(1,3); Sara Hägg, Ph.D.(1); Na Cai, Ph.D.(4), Ralf Kuja-Halkola, Ph.D.(1); Christina Dalman, M.D.(2); Patrick F Sullivan, M.D. FRANZCP(1,5); Yi Lu, Ph.D.(1,2)
 
-Thuy-Dung Nguyen, M.Sc.(1,2); Arvid Harder, B.Sc.(1); Ying Xiong, M.Sc.(1); Kaarina Kowalec, Ph.D.(1,3); Sara Hägg, Ph.D.(1); Ralf Kuja-Halkola, Ph.D.(1); Christina Dalman, M.D.(2); Patrick F Sullivan, M.D. FRANZCP(1,4); Yi Lu, Ph.D.(1,2)
-
-(1)	Department of Medical Epidemiology and Biostatistics, Karolinska Institutet, Stockholm, Sweden
-(2)	Department of Global Public Health, Karolinska Institute, Stockholm, Sweden
-(3)	College of Pharmacy, University of Manitoba, Winnipeg, Canada
-(4)	Department of Genetics and Psychiatry, University of North Carolina, Chapel Hill, NC, USA
+1.	Department of Medical Epidemiology and Biostatistics, Karolinska Institutet, Stockholm, Sweden
+2.	Department of Global Public Health, Karolinska Institute, Stockholm, Sweden
+3.	College of Pharmacy, University of Manitoba, Winnipeg, Canada
+4.	Helmholtz Pioneer Campus, Helmholtz Zentrum München, Neuherberg, Germany
+5.	Department of Genetics and Psychiatry, University of North Carolina, Chapel Hill, NC, USA
 
 Corresponding author: 
 Yi Lu, Ph.D.
@@ -79,6 +78,18 @@ pathbirth <- "<path>/ukb180427_2734.tab"
 rawbirth <- fread(pathbirth, header = T)
 names(rawbirth)[1] = "eid"
 rawbirth[,2:4][rawbirth[,2:4] == -3] <- NA
+
+# This df contain IDs of individual with genotype data, and variable het.missing.outliers coded 0 if high quality data, 1 as low quality data.
+genometa <- fread("<path>/ukb2222_cal_v2_s488364_w_header_w_sqc_v2.txt", header = T)
+names(genometa)[c(1,2)] <- c("fid", "eid")
+
+# This df contains IDs of ancestry outliers
+pop_outlier <- fread("<path>/ancestraloutliers_3sd.fid.iid", header = F)
+names(pop_outlier) = c("fid", "eid")
+
+# This df contains IDs of individual who withdrawed their consent form from UKB study
+withdraw <- fread("<path>/w22224_20200820_withdraw.csv", header = F)
+names(withdraw)[1] <- c("eid")
 ```
 
 # I. DEFINE MAJOR DEPRESSION CASES
@@ -329,8 +340,6 @@ dfcidi_all$cidi_mdd <- ifelse((dfcidi_all$cidi_lifetime == 1 | dfcidi_all$cidi_c
 ```{r}
 dfcidi <- dfcidi_all %>%
   select(c("eid","cidi_lifetime", "cidi_current", "cidi_mdd"))
-
-save(dfcidi,file="<path>/cidi_case.Rda")
 ```
 
 ***************H***********************H********************H************************H*************
@@ -376,8 +385,6 @@ dficd$icd_mdd[dficd$miss==1] <- NA
 ```{r}
 dficd<- dficd %>%
   select(c(eid, icd_mdd))
-
-save(dficd,file="<path>/icd.Rda")
 ```
 
 ***************H***********************H********************H************************H*************
@@ -423,8 +430,6 @@ dfprobable$probable_md <- ifelse((dfprobable$v20126==3 | dfprobable$v20126==4 | 
 ```{r}
 dfprobable <- dfprobable %>%
   select(c("eid","probable_md" ))
-
-save(dfprobable,file="<path>/probable.Rda")
 ```
 
 ***************H***********************H********************H************************H*************
@@ -494,8 +499,6 @@ dfself$self_rep_md <- ifelse((dfself$code1286==1 | dfself$code11==1), 1, 0)
 ```{r}
 dfself <- dfself %>%
   select(c("eid", "self_rep_md"))
-
-save(dfself,file="<path>/self_rep.Rda")
 ```
 
 ***************H***********************H********************H************************H*************
@@ -522,8 +525,6 @@ dfcardinal$cardinal_md[(is.na(dfcardinal$cardinal_md) & dfcardinal$non_miss==1)]
 ```{r}
 dfcardinal <- dfcardinal %>%
   select(c("eid", "cardinal_md"))
-
-save(dfcardinal,file="<path>/cardinal.Rda")
 ```
 
 ***************H***********************H********************H************************H*************
@@ -556,8 +557,6 @@ dfseek_help$seek_help_md[is.na(dfseek_help$seek_help_md) & dfseek_help$non_miss=
 ```{r}
 dfseek_help<- dfseek_help %>%
     select(c(eid, seek_help_md))
-
-save(dfseek_help,file="<path>/seek_help.Rda")
 ```
 
 ***************H***********************H********************H************************H*************
@@ -592,8 +591,6 @@ raw20003$antipsy_lithium[raw20003$miss==1 & raw20003$antipsy_lithium==0] <- NA
 ```{r}
 dfmedication <- raw20003 %>%
   select(c("eid", "antidep", "antipsy_lithium"))
-
-save(dfmedication,file="<path>/medication.Rda")
 ```
 
 ***************H***********************H********************H************************H*************
@@ -730,3 +727,66 @@ dfcontrol <- dfcontrol %>%
 save(dfcontrol,file="<path>/dfcontrol.Rda")
 ```
 
+***************H***********************H********************H************************H*************
+***************H***********************H********************H************************H*************
+***************H***********************H********************H************************H*************
+
+# MERGING DATASETS TO CREATE A FINAL POPULATION
+The dataset from UKB contains 502616 observations. We excluded those who 1) did not have genotype data or unmatched ID in phenotype and genotype datasets, 2) withdraw consent, 3) Low-quality genotype data, and 4) ancestry outliers (whose first two principal components exceeded three standard deviations from the means of 1000 Genome European samples). We retained 459,590 observations. 
+
+```{r}
+include_pop<- genometa %>% 
+  filter(het.missing.outliers == 0) %>% # Low-quality genotype data
+  anti_join (., pop_outlier, by="eid") %>% # Ancersty outliers
+  anti_join(., withdraw, by="eid") %>% # Consent withdrawal
+  merge(., df_md) %>% # without genotype data or unmatched ID in phenotype and genotype datasets
+  merge(., rawsex, by="eid") 
+
+#We applied case and control exclusion criteria as defined in Supplementary S1.1, we retained 455,956 observations with 124,121 cases and 250,229 controls.
+final_pop <- include_pop %>%
+  merge(., df_md, by="eid") %>%
+  merge(., dfcontrol, by="eid") %>%
+  anti_join(.,id_exclusion, by="eid")
+```
+
+# Process the df case/control so 1=case, 0= control
+```{r}
+md_def = c("cidi_lifetime","cidi_current","cidi_mdd","icd_mdd", "probable_md","self_rep_md","cardinal_md", "seek_help_md","antidep","md15")
+
+final_pop$cidi_lifetime[final_pop$cidi_lifetime==0] <-NA
+final_pop$cidi_lifetime[final_pop$control_md==1 & is.na(final_pop$cidi_lifetime)] <-0
+
+
+final_pop$cidi_current[final_pop$cidi_current==0] <-NA
+final_pop$cidi_current[final_pop$control_md==1 & is.na(final_pop$cidi_current)] <-0
+
+final_pop$cidi_mdd[final_pop$cidi_mdd==0] <-NA
+final_pop$cidi_mdd[final_pop$control_md==1 & is.na(final_pop$cidi_mdd)] <-0
+
+final_pop$icd_mdd[final_pop$icd_mdd==0] <-NA
+final_pop$icd_mdd[final_pop$control_md==1 & is.na(final_pop$icd_mdd)] <-0
+
+final_pop$probable_md[final_pop$probable_md==0] <-NA
+final_pop$probable_md[final_pop$control_md==1 & is.na(final_pop$probable_md)] <-0
+
+final_pop$self_rep_md[final_pop$self_rep_md==0] <-NA
+final_pop$self_rep_md[final_pop$control_md==1 & is.na(final_pop$self_rep_md)] <-0
+
+final_pop$cardinal_md[final_pop$cardinal_md==0] <-NA
+final_pop$cardinal_md[final_pop$control_md==1 & is.na(final_pop$cardinal_md)] <-0
+
+final_pop$seek_help_md[final_pop$seek_help_md==0] <-NA
+final_pop$seek_help_md[final_pop$control_md==1 & is.na(final_pop$seek_help_md)] <-0
+
+final_pop$antidep[final_pop$antidep==0] <-NA
+final_pop$antidep[final_pop$control_md==1 & is.na(final_pop$antidep)] <-0
+
+final_pop$md15[final_pop$md15==0] <-NA
+final_pop$md15[final_pop$control_md==1 & is.na(final_pop$md15)] <-0
+
+```
+
+# Save the final case-control data
+```{r}
+save(final_pop,file="<path>/case_control_201029.Rda")
+```
