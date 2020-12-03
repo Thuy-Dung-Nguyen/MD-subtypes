@@ -13,7 +13,7 @@ Thuy-Dung Nguyen, M.Sc.(1,2); Arvid Harder, B.Sc.(1); Ying Xiong, M.Sc.(1); Kaar
 # DERIVE PHENOTYPE IN UKB
 ## EXTRACT DATA UKB
 The code in the UKB_variable_extraction.Rmd was used to extract data from UKB mother datasets.
-In this file, you can find the variable list which are stored in each dataset mentioned in the section DERIVE MD CASES, CONTROLS, EXCLUSION CRITERIA and DERIVE MD SUBTYPES.
+In this file, you can find the list of variable which were stored in each dataset mentioned in the section DERIVE MD CASES, CONTROLS, EXCLUSION CRITERIA and DERIVE MD SUBTYPES.
 If having access the UKB datasets, you can use these code to extract variable out into child datasets. Then, use those child datasets as input dataset to derive variables.
 
 ## DERIVE MD CASES, CONTROLS, EXCLUSION CRITERIA
