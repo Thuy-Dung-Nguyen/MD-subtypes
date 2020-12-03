@@ -1,5 +1,5 @@
 # INTRODUCTION
-In this folder the code accompanying the paper:
+In this folder the code accompanying the manuscript:
 
 ### Genetic heterogeneity and subtypes of major depression
 
@@ -12,9 +12,9 @@ Thuy-Dung Nguyen, M.Sc.(1,2); Arvid Harder, B.Sc.(1); Ying Xiong, M.Sc.(1); Kaar
 
 # DERIVE PHENOTYPE IN UKB
 ## EXTRACT DATA UKB
-The code in the UKB_variable_extraction.Rmd was used to extract data from UKB mother datasets.
+The code in the UKB_variable_extraction.Rmd was used to extract data from UKB original datasets.
 In this file, you can find the list of variable which were stored in each dataset mentioned in the section DERIVE MD CASES, CONTROLS, EXCLUSION CRITERIA and DERIVE MD SUBTYPES.
-If having access the UKB datasets, you can use these code to extract variable out into child datasets. Then, use those child datasets as input dataset to derive variables.
+If having access the UKB datasets, you can use these code to extract variable out into small raw datasets. Then, use those raw datasets as input dataset to derive variables.
 
 ## DERIVE MD CASES, CONTROLS, EXCLUSION CRITERIA
 The code in Derive_MD_case_control.Rmd was used to derive MD cases, control and exclusion criteria. 
