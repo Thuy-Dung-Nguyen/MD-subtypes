@@ -21,6 +21,9 @@ The code in Derive_MD_case_control.Rmd was used to derive MD cases, control and 
 Input data are mentioned in the EXTRACT DATA UKB.
 
 ## DERIVE MD SUBTYPES
+The code in Derive_subtype.Rmd was used to derive MD subtypes for the study.
+Input data are mentioned in the EXTRACT DATA UKB.
+
 ## PIPILINE FOR GWAS, ESTIMATING SNP-HERITABILITY AND GENETIC CORRELATION
 After derivinng phenotypes, we constructed phenotype dataset for each subtype, and use this pipeline to conduct GWAS and estimating SNP-heritability, genetic correlations.
 Instruction on:
