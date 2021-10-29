@@ -181,6 +181,7 @@ GWASFOLDER contains all GWAS files in the previous step
 ALLELE is a file that contains list of SNPs to be matched
 SUMSTATSFOLDER is to contain all formated sumstats output files
 
+3.1.1 For estimating heritability on observed scale without specifying N effective
 ```{bash}
 LDSCDIR="/<path/name of directory with ldsc program>/"
 GWASFOLDER="/<path/folder that contains all GWAS files>/"
@@ -198,6 +199,25 @@ $LDSCDIR/munge_sumstats.py \
 --chunksize 500000 \
 --out $SUMSTATFOLDER/$line
 done
+```
+3.1.1 For estimating heritability on observed scale with sample size adjusted to N effective
+
+```{bash}
+LDSCDIR="/<path/name of directory with ldsc program>/"
+GWASFOLDER="/<path/folder that contains all GWAS files>/"
+ALLELE="/<path>/w_hm3.noMHC.snplist"
+SUMSTATSFOLDER="/<path/formated sumstats foler name>/"
+
+$LDSCDIR/munge_sumstats.py \
+--sumstats $GWASFOLDER/GWAS.subtype1.filename \
+--snp SNP \
+--signed-sumstats BETA,0 \
+--N N_effective_subtype1 \
+--p P \
+--merge-alleles $ALLELE \
+--info INFO \
+--chunksize 500000 \
+--out $SUMSTATFOLDER/sumstats.subtype1.filename
 ```
 
 ## 3.2 Estimating SNP-heritability 
